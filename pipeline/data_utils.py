@@ -146,9 +146,7 @@ def generate_earthquake_data(earthquake_log: pathlib.Path, box_config: BoxConfig
             self.df['magtype'] = self.df['magtype'].str.strip().str.lower()
             self.df.dropna(subset=['time'], inplace=True)
             self.df.reset_index(drop=True, inplace=True)
-
-    def get_events(self):
-        return self.df.iterrows()
+    
     earthquake_data = EarthquakeCatalog(earthquake_log)
     station_lat, station_lon = 24.07396028832464, 121.1286975322632
 
