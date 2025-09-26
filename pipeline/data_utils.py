@@ -57,20 +57,20 @@ def generate_background_data(earthquake_log: pathlib.Path, box_config: BoxConfig
     for hour in earthquake_datetimes:
         buffered_range = pd.date_range(hour - buffer, hour + buffer, freq='h')
         excluded = excluded.union(buffered_range)
-    
-    valid_hours = all_hours.difference(excluded).unique()
+
+    # Pandas' DatetimeIndex.union returns an Index[Any] for some reason
+    valid_hours = all_hours.difference(excluded).unique() # type: ignore
 
     real_samples = min(num_samples, len(valid_hours))
     random = np.random.default_rng()
 
     selected_hours = pd.DatetimeIndex(random.choice(valid_hours, real_samples, False))
 
-    
-    read_background_window = partial(_read_background_window, 
-                                                time_before = timedelta(seconds=seconds_before), 
-                                                time_after = timedelta(seconds=seconds_after), 
+    read_background_window = partial(_read_background_window,
+                                                time_before = timedelta(seconds=seconds_before),
+                                                time_after = timedelta(seconds=seconds_after),
                                                 box = box_config)
-    
+
     events = process_map(read_background_window, [timestamp for timestamp in selected_hours.sort_values()])
     events[:] = [e for e in events if e is not None]
 
@@ -83,7 +83,6 @@ def _surface_wave_delay(event_lat, event_lon, station_lat, station_lon, vsurface
     """Compute surface wave travel delay (s) given event and station coordinates."""
     dist_km = geodesic((event_lat, event_lon), (station_lat, station_lon)).km
     return dist_km / vsurface
-
 
 def _read_earthquake_window(idx:int, df:pd.DataFrame, station_lat:float, station_lon:float, time_before:timedelta, time_after:timedelta, box: BoxConfig):
     try:
@@ -146,12 +145,12 @@ def generate_earthquake_data(earthquake_log: pathlib.Path, box_config: BoxConfig
             self.df['magtype'] = self.df['magtype'].str.strip().str.lower()
             self.df.dropna(subset=['time'], inplace=True)
             self.df.reset_index(drop=True, inplace=True)
-    
+
     earthquake_data = EarthquakeCatalog(earthquake_log)
     station_lat, station_lon = 24.07396028832464, 121.1286975322632
 
-    read_earthquake_window = partial(_read_earthquake_window, 
-                                     df = earthquake_data.df, 
+    read_earthquake_window = partial(_read_earthquake_window,
+                                     df = earthquake_data.df,
                                      station_lat = station_lat,
                                      station_lon = station_lon,
                                      time_before = timedelta(seconds=seconds_before),
