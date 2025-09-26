@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import timedelta
 from functools import partial
+from typing import Any
 from paros_data_grabber import query_influx_data
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
@@ -44,7 +45,7 @@ def _read_background_window(timestamp:pd.Timestamp, time_before:timedelta, time_
             tqdm.write(f"Failed on {timestamp}: {e}")
             return
 
-def generate_background_data(earthquake_log: pathlib.Path, box_config: BoxConfig, buffer_hours: int, num_samples: int, seconds_before: int, seconds_after: int) -> dict:
+def generate_background_data(earthquake_log: pathlib.Path, box_config: BoxConfig, buffer_hours: int, num_samples: int, seconds_before: int, seconds_after: int) -> dict[str, Any]:
     earthquake_datetimes = pd.to_datetime(pd.read_csv(earthquake_log)['time'])
 
     start_time = earthquake_datetimes.min().floor('h')
@@ -79,7 +80,7 @@ def generate_background_data(earthquake_log: pathlib.Path, box_config: BoxConfig
         data[f"background_{i:04d}"] = e
     return data
 
-def _surface_wave_delay(event_lat, event_lon, station_lat, station_lon, vsurface=3.4):
+def _surface_wave_delay(event_lat: float, event_lon: float, station_lat: float, station_lon: float, vsurface=3.4):
     """Compute surface wave travel delay (s) given event and station coordinates."""
     dist_km = geodesic((event_lat, event_lon), (station_lat, station_lon)).km
     return dist_km / vsurface
