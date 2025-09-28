@@ -1,15 +1,17 @@
+import json
+import pathlib
 from dataclasses import dataclass
 from datetime import timedelta
 from functools import partial
 from typing import Any
+
+import numpy as np
+import pandas as pd
+from geopy.distance import geodesic
 from paros_data_grabber import query_influx_data
 from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
-from geopy.distance import geodesic
-import pathlib
-import json
-import numpy as np
-import pandas as pd
+
 
 @dataclass
 class BoxConfig:
