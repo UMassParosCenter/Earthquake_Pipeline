@@ -1,0 +1,7 @@
+[project]
+name = "eq_cnn_pipeline"
+version = "1.0"
+
+[tool.pyright]
+typeCheckingMode = "standard"
+useLibraryCodeForTypes = false
