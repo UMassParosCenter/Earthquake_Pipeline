@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Sequence
 
 import numpy as np
@@ -5,6 +6,13 @@ from numpy.typing import NDArray
 from scipy.signal import butter, filtfilt, resample_poly, welch, windows
 
 EPS = 1e-12
+
+@dataclass
+class Baseline:
+    f: NDArray[np.floating]
+    med: np.floating
+    mad: np.floating
+    df: np.floating
 
 def dc_block(x: NDArray[np.floating], a=0.999) -> NDArray[np.floating]:
     b = [1, -1]
@@ -63,7 +71,8 @@ def remove_high_outliers(psd_array: Sequence[NDArray[np.floating]], freq_vec: ND
 
 def validate_event_sample(
     pxx_windows: Sequence[NDArray[np.floating]],
-    f: NDArray[np.floating], med_bg: np.floating,
+    f: NDArray[np.floating],
+    med_bg: np.floating,
     mad_bg: np.floating,
     df: np.floating,
     f_lo=1.0,

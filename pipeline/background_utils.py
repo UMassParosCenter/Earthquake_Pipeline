@@ -9,6 +9,7 @@ from typing_extensions import Any
 
 from pipeline.common import (
     EPS,
+    Baseline,
     band_mask,
     preprocess,
     remove_high_outliers,
@@ -113,8 +114,8 @@ def _create_background_psd(event_name: str, data: dict, fs_in: int, fs_out: int,
         window_psds: list[NDArray[np.floating]] = []
         freq_vec = None
 
-        for w in range(num_windows):
-            idx_start = w * stride
+        for i in range(num_windows):
+            idx_start = i * stride
             idx_end = idx_start + window_size
             segment = waveform[idx_start:idx_end]
             pxx, f = welch_psd(segment, fs_out)
@@ -167,7 +168,7 @@ def process_background_data(data: dict, fs_in: int, fs_out: int, overlap: float,
         labeled_event_dicts[f"event{i:03d}"] = e
     return all_bg_psds, labeled_event_dicts
 
-def build_simple_baseline(bg_pxx_list: NDArray[np.floating], f: NDArray[np.floating], f_lo=1.0, f_hi=5.0) -> tuple[np.floating, np.floating, np.floating]:
+def build_simple_baseline(bg_pxx_list: NDArray[np.floating], f: NDArray[np.floating], f_lo=1.0, f_hi=5.0) -> Baseline:
     """
     bg_pxx_list: array-like of shape (N_bg, F) - PSDs from background windows
     f: 1D freq vector (F,)
@@ -179,4 +180,4 @@ def build_simple_baseline(bg_pxx_list: NDArray[np.floating], f: NDArray[np.float
     bg_band_power: NDArray[np.floating] = np.sum(bg[:, m] * df, axis=1)  # shape (N_bg,)
     med = np.median(bg_band_power)
     mad = 1.4826 * np.median(np.abs(bg_band_power - med)) + EPS
-    return med, mad, df
+    return Baseline(f, med, mad, df)

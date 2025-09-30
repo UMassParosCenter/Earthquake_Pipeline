@@ -1,6 +1,6 @@
 import pathlib
 
-from pipeline import background_utils, data_utils
+from pipeline import background_utils, data_utils, common
 
 BOX_CONFIG_PATH = pathlib.Path("sensor_config.json")
 EARTHQUAKE_LOG_PATH = pathlib.Path("data/EarthQuakeData.csv")
@@ -16,4 +16,4 @@ earthquake_windows = data_utils.generate_earthquake_data(EARTHQUAKE_LOG_PATH, bo
 print("Processing background data")
 all_bg_psds, labeled_bg_dicts = background_utils.process_background_data(background_windows, 20, 100, 0.5, 10)
 any_window = list(list(labeled_bg_dicts.values())[0].values())[0]
-med, mad, df = background_utils.build_simple_baseline(all_bg_psds, any_window["frequency"])
+common.Baseline = background_utils.build_simple_baseline(all_bg_psds, any_window["frequency"])
