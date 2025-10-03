@@ -9,7 +9,7 @@ EPS = 1e-12
 
 @dataclass
 class Baseline:
-    f: NDArray[np.floating]
+    f_ref: NDArray[np.floating]
     med: np.floating
     mad: np.floating
     df: np.floating
@@ -70,11 +70,9 @@ def remove_high_outliers(psd_array: Sequence[NDArray[np.floating]], freq_vec: ND
     return non_outlier_idx
 
 def validate_event_sample(
-    pxx_windows: Sequence[NDArray[np.floating]],
+    baseline: Baseline,
+    pxx_windows: NDArray,
     f: NDArray[np.floating],
-    med_bg: np.floating,
-    mad_bg: np.floating,
-    df: np.floating,
     f_lo=1.0,
     f_hi=5.0,
     mad_z_thresh=20.0,
@@ -91,11 +89,14 @@ def validate_event_sample(
     pxx_mat = np.asarray(pxx_windows)
     m = band_mask(f, f_lo, f_hi)
 
+    if not np.allclose(baseline.f_ref, f):
+        return False, np.full_like(pxx_mat, False, dtype=bool), []
+
     # compute band power per window
-    band_powers: NDArray[np.floating] = np.sum(pxx_mat[:, m] * df, axis=1)
+    band_powers: NDArray[np.floating] = np.sum(pxx_mat[:, m] * baseline.df, axis=1)
 
     # robust z-score (MAD-based)
-    mad_z: NDArray[np.floating] = (band_powers - med_bg) / mad_bg
+    mad_z: NDArray[np.floating] = (band_powers - baseline.med) / baseline.mad
     flags: NDArray[np.bool] = mad_z >= mad_z_thresh
 
     # find runs of consecutive True
