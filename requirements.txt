@@ -1,0 +1,7 @@
+geopy>=2.4.1
+numpy>=2.3.3
+pandas>=2.3.3
+paros_data_grabber>=0.1.1
+scipy>=1.16.2
+tqdm>=4.67.1
+typing_extensions>=4.15.0
