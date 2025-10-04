@@ -4,3 +4,4 @@
 .zed
 **/__pycache__/
 data/
+!data/EarthQuakeData.csv
