@@ -1,4 +1,5 @@
 import pathlib
+import pickle
 
 from pipeline import earthquake_utils, background_utils, data_utils
 
@@ -18,3 +19,7 @@ all_bg_psds, labeled_bg_dicts = background_utils.process_background_data(backgro
 any_window = list(list(labeled_bg_dicts.values())[0].values())[0]
 baseline = background_utils.build_simple_baseline(all_bg_psds, any_window["frequency"])
 eq_data = earthquake_utils.process_earthquake_data(earthquake_windows, 20, 100, 0.5, 10, baseline)
+with open("data/BackgroundPSDs.pkl", "wb") as f:
+    pickle.dump(labeled_bg_dicts, f)
+with open("data/EarthquakePSDs.pkl", "wb") as f:
+    pickle.dump(eq_data, f)
