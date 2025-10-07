@@ -87,5 +87,5 @@ def process_earthquake_data(data: dict, fs_in: int, fs_out: int, overlap: float,
     results = process_map(create_background_psd, event_names)
     labeled_event_dicts = {}
     for i, e in enumerate([r for r in results if r is not None]):
-        labeled_event_dicts[f"event{i:03d}"] = e
+        labeled_event_dicts[f"event_{i:03d}"] = e
     return labeled_event_dicts

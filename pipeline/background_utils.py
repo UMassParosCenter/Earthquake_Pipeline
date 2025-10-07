@@ -165,7 +165,7 @@ def process_background_data(data: dict, fs_in: int, fs_out: int, overlap: float,
 
     labeled_event_dicts = {}
     for i, e in enumerate(returned_event_dicts):
-        labeled_event_dicts[f"event{i:03d}"] = e
+        labeled_event_dicts[f"event_{i:03d}"] = e
     return all_bg_psds, labeled_event_dicts
 
 def build_simple_baseline(bg_pxx_list: NDArray[np.floating], f: NDArray[np.floating], f_lo=1.0, f_hi=5.0) -> Baseline:
