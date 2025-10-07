@@ -1,16 +1,21 @@
 import pathlib
 
+# Required files
 BOX_CONFIG_PATH = pathlib.Path("sensor_config.json")
 EARTHQUAKE_LOG_PATH = pathlib.Path("data/EarthQuakeData.csv")
 BACKGROUND_PSD_PKL = "data/BackgroundPSDs.pkl"
 EARTHQUAKE_PSD_PKL = "data/EarthquakePSDs.pkl"
-TRAINING_LOG_PATH = "data/TrainingLog.csv"
+TRAINING_LOG_PATH = "data/model_output/TrainingLog.csv"
+REFERENCE_NPZ_PATH = "data/model_output/Reference.npz"
+MODEL_PTH_PATH = "data/model_output/CNNmodel.pth"
 
+# PSD parameters
 BACKGROUND_BUFFER_HOURS = 1
 N_BACKGROUND_SAMPLES = 10
 WINDOW_BEFORE_SEC = 15
 WINDOW_AFTER_SEC = 45
 
+# Training parameters
 RADAM_TRAINING_RATE = 1e-4
 N_EPOCHS = 70
 EARLY_STOPPING_PATIENCE = 5
