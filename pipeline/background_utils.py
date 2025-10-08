@@ -29,7 +29,7 @@ def _addWindNoise(
 ) -> NDArray[np.floating]:
     """
     Adds synthetic wind noise to provided base signal.
-3
+
     Args:
         base (np.ndarray): Base signal
         fs (float): Sampling frequency, Hz
@@ -170,14 +170,23 @@ def process_background_data(data: dict, fs_in: int, fs_out: int, overlap: float,
 
 def build_simple_baseline(bg_pxx_list: NDArray[np.floating], f: NDArray[np.floating], f_lo=1.0, f_hi=5.0) -> Baseline:
     """
-    bg_pxx_list: array-like of shape (N_bg, F) - PSDs from background windows
-    f: 1D freq vector (F,)
-    returns median_band, mad_band, df
+    Builds a baseline object containing the median and median absolute
+    deviation of all provided band powers.
+
+    Args:
+        bg_pxx_list (NDArray[np.floating]): array-like of shape (N_bg, F) - PSDs from
+            background windows
+        f (NDArray[np.floating]): 1D freq vector (F,)
+        f_lo (float, optional): Lower bound of frequency band to consider. Defaults to 1.0 Hz.
+        f_hi (float, optional): Upper bound of frequency band to consider. Defaults to 5.0 Hz.
+
+    Returns:
+        Baseline: Object containing frequency bins, median, median absolute deviation, and frequency spacing.
     """
     bg = np.asarray(bg_pxx_list)
-    m = band_mask(f, f_lo, f_hi)
+    mask = band_mask(f, f_lo, f_hi)
     df = np.median(np.diff(f))  # assumes uniform spacing
-    bg_band_power: NDArray[np.floating] = np.sum(bg[:, m] * df, axis=1)  # shape (N_bg,)
-    med = np.median(bg_band_power)
-    mad = 1.4826 * np.median(np.abs(bg_band_power - med)) + EPS
+    bg_band_powers: NDArray[np.floating] = np.sum(bg[:, mask] * df, axis=1)  # shape (N_bg,)
+    med = np.median(bg_band_powers)
+    mad = 1.4826 * np.median(np.abs(bg_band_powers - med)) + EPS
     return Baseline(f, med, mad, df)

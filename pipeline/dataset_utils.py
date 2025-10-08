@@ -83,7 +83,7 @@ def load_pickle_data(path: str) -> dict:
     Loads a pickle file and returns the 'psdResults' field if present,
     similar to how loadmat(...)[‘psdResults’] works.
 
-    Parameters:
+    Args:
         path (str): Path to the .pkl file
 
     Returns:
