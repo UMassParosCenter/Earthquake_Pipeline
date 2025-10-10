@@ -18,11 +18,12 @@ class BoxConfig:
     box_id: str
     sensor_id: str
     password:str
+    sample_rate_hz: int
 
 def load_box_config(json_path: pathlib.Path) -> BoxConfig:
     with open(json_path) as f:
         config = json.load(f)
-    return BoxConfig(config['box_id'], config['sensor_id'], config['password'])
+    return BoxConfig(config['box_id'], config['sensor_id'], config['password'], config['sample_rate_hz'])
 
 def _read_background_window(timestamp:pd.Timestamp, time_before:timedelta, time_after:timedelta, box: BoxConfig):
         start_t = (timestamp - time_before).strftime("%Y-%m-%dT%H:%M:%S")

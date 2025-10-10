@@ -12,9 +12,10 @@ pip install -r requirements.txt
 To use Paros sensor data hosted on InfluxDB, configure the source in `sensor_config.json`. Defaults (sans password) are filled in for `parost2`.
 ```json
 {
-  "box_id": "",
-  "sensor_id": "",
-  "password": ""
+  "box_id": "parost2",
+  "sensor_id": "141929",
+  "password": "******",
+  "sample_rate_hz": 20
 }
 ```
 
