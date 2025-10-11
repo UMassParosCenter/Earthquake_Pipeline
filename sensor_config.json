@@ -1,5 +1,6 @@
 {
   "box_id": "parost2",
   "sensor_id": "141929",
-  "password": "*******"
+  "password": "*******",
+  "sample_rate_hz": 20
 }
