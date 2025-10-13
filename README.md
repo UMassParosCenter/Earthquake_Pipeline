@@ -25,16 +25,23 @@ A list of earthquake events located at `data/EarthQuakeData.csv` is used to gene
 ## Usage
 Top level scripts are located in `/scripts` and can be run from the command line.
 
-### 0. PSD Generation
+### 0. Parameters
+Tuning parameters for the pipeline can be found in `scripts/constants.py`.
+
+
+### 1. PSD Generation
 Run the following script to save a dictionary of events to PSDs in `/data` for later use in training:
 ```bash
 python -m scripts.record_data
 ```
 
-### 1. Model Training
-To be added.
-
-### 2. Evaluation
+### 2. Model Training
+To train the model and save a `.pth` file and a `.npz` storing normalization information run:
+```bash
+python -m scripts.train
+```
+Results will be saved in `/data/model_output`.
+### 3. Evaluation
 To be added.
 
 ## Data Output
