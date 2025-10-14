@@ -26,9 +26,6 @@ import csv
 eq_array = extract_psd_array(load_pickle_data(EARTHQUAKE_PSD_PKL))
 bg_array = extract_psd_array(load_pickle_data(BACKGROUND_PSD_PKL))
 
-print("EQ array shape:", eq_array.shape)
-print("BG array shape:", bg_array.shape)
-
 # Assign labels
 eq_labels = np.ones(len(eq_array), dtype=int)
 bg_labels = np.zeros(len(bg_array), dtype=int)
@@ -41,37 +38,36 @@ np.random.shuffle(indices)
 X = X[indices]
 y = y[indices]
 
-# --- Apply log transform globally ---
+# Apply log transform globally
 X_log = np.log10(X + 1e-12)
 
-# --- Compute normalization ---
+# Compute normalization
 reference = Reference(X_log.mean(axis=0), X_log.std(axis=0) + 1e-12)
 X_norm = reference.normalize(X_log)
 
 # Save normalization stats
 np.savez(REFERENCE_NPZ_PATH, mean=reference.mean, std=reference.std)
 
-# --- Compute class weights ---
+# Compute class weights
 class_weights = compute_class_weight("balanced", classes=np.unique(y), y=y)
 class_weights = torch.tensor(class_weights, dtype=torch.float32)
 
-# --- Prepare DataLoader ---
+# Prepare DataLoader
 dataset = PSD_Dataset(X_norm, y)
 train_loader = DataLoader(
     dataset, batch_size=32, shuffle=True, num_workers=min(4, os.cpu_count() or 1)
 )
 
-# --- Device ---
+# Define device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# --- Model, loss, optimizer ---
+# Define model, loss, optimizer, early stopping
 model = EarthquakeCNN2d(input_shape=X.shape[1:]).to(device)
 criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 optimizer = optim.RAdam(model.parameters(), lr=RADAM_TRAINING_RATE)
-
-# --- Training ---
 early_stopping = EarlyStopping(patience=EARLY_STOPPING_PATIENCE, min_delta=EARLY_STOPPING_MIN_DELTA)
 
+# Train model
 with open(TRAINING_LOG_PATH, mode="w", newline="") as log_file:
     writer = csv.writer(log_file)
     writer.writerow(["epoch", "loss", "accuracy"])  # header row
@@ -104,6 +100,6 @@ with open(TRAINING_LOG_PATH, mode="w", newline="") as log_file:
             print("Early stopping triggered.")
             break
 
-# --- Save final model ---
+# Save final model
 torch.save(model.state_dict(), MODEL_PTH_PATH)
 print(f"Training complete. Model saved to {MODEL_PTH_PATH}")
