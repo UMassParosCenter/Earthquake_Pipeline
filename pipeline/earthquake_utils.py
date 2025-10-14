@@ -75,7 +75,7 @@ def _create_earthquake_psd(event_name: str, data: dict, fs_in: int, fs_out: int,
 
 def process_earthquake_data(data: dict, fs_in: int, fs_out: int, overlap: float, delta_t: int, baseline: Baseline) -> dict[str, Any]:
     event_names = list(data.keys())
-    create_background_psd = partial(
+    create_earthquake_psd = partial(
         _create_earthquake_psd,
         data=data,
         fs_in=fs_in,
@@ -84,7 +84,7 @@ def process_earthquake_data(data: dict, fs_in: int, fs_out: int, overlap: float,
         delta_t=delta_t,
         baseline=baseline
     )
-    results = process_map(create_background_psd, event_names)
+    results = process_map(create_earthquake_psd, event_names)
     labeled_event_dicts = {}
     for i, e in enumerate([r for r in results if r is not None]):
         labeled_event_dicts[f"event_{i:03d}"] = e
