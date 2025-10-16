@@ -22,8 +22,10 @@ reference_npz: np.lib.npyio.NpzFile = np.load(REFERENCE_NPZ_PATH)
 reference = Reference(reference_npz["mean"], reference_npz["std"])
 reference_npz.close()
 
+# Start and end times for inference
 start_time = datetime(2025, 5, 5, 0, 0, 0, tzinfo=None)
 end_time = datetime(2025, 5, 5, 23, 59, 59, tzinfo=None)
+
 results: list[eval_utils.Inference] = eval_utils.infer_timerange(
     start_time,
     end_time,

@@ -40,9 +40,13 @@ To train the model and save a `.pth` file and a `.npz` storing normalization inf
 ```bash
 python -m scripts.train
 ```
-Results will be saved in `/data/model_output`.
+Results will be saved in `/data/model`.
 ### 3. Evaluation
-To be added.
+To train evaluate the model against a data range, run:
+```bash
+python -m scripts.train
+```
+Start and end times can be modified in the script. Results will be saved as CSV files in `/data/output`.
 
 ## Data Output
 All outputs are stored in the generated `data/` folder and its subdirectories.
