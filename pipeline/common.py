@@ -7,6 +7,7 @@ from scipy.signal import butter, filtfilt, resample_poly, welch, windows
 
 EPS = 1e-12
 
+
 @dataclass
 class Baseline:
     f_ref: NDArray[np.floating]
@@ -14,10 +15,12 @@ class Baseline:
     mad: np.floating
     df: np.floating
 
+
 def dc_block(x: NDArray[np.floating], a=0.999) -> NDArray[np.floating]:
     b = [1, -1]
     a_coeffs = [1, -a]
     return filtfilt(b, a_coeffs, x)
+
 
 def preprocess(x: NDArray[np.floating], fs: float) -> NDArray[np.floating]:
     x = dc_block(x)
@@ -26,7 +29,10 @@ def preprocess(x: NDArray[np.floating], fs: float) -> NDArray[np.floating]:
     b, a = butter(4, Wn, btype="high")
     return filtfilt(b, a, x)
 
-def welch_psd(x: NDArray[np.floating], fs: float) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
+
+def welch_psd(
+    x: NDArray[np.floating], fs: float
+) -> tuple[NDArray[np.floating], NDArray[np.floating]]:
     window_duration = 5
     nperseg = int(fs * window_duration)
     noverlap = int(nperseg * 0.75)
@@ -37,7 +43,10 @@ def welch_psd(x: NDArray[np.floating], fs: float) -> tuple[NDArray[np.floating],
     keep = f <= 10
     return pxx[keep], f[keep]
 
-def safe_resample(x: NDArray[np.floating], fs_in: float, fs_out: float) -> NDArray[np.floating]:
+
+def safe_resample(
+    x: NDArray[np.floating], fs_in: float, fs_out: float
+) -> NDArray[np.floating]:
     x = dc_block(x)
     fc = 0.9 * min(fs_in, fs_out) / 2
     b_lp, a_lp = butter(4, fc / (fs_in / 2), btype="low")
@@ -45,10 +54,18 @@ def safe_resample(x: NDArray[np.floating], fs_in: float, fs_out: float) -> NDArr
     y = resample_poly(x, np.round(fs_out), np.round(fs_in))
     return y
 
+
 def band_mask(f: NDArray[np.floating], f_lo=1.0, f_hi=5.0) -> NDArray[np.bool]:
     return (f >= f_lo) & (f <= f_hi)
 
-def remove_high_outliers(psd_array: Sequence[NDArray[np.floating]], freq_vec: NDArray[np.floating], f_lo=1.0, f_hi=5.0, threshold=20.0) -> NDArray:
+
+def remove_high_outliers(
+    psd_array: Sequence[NDArray[np.floating]],
+    freq_vec: NDArray[np.floating],
+    f_lo=1.0,
+    f_hi=5.0,
+    threshold=20.0,
+) -> NDArray:
     """
     Remove PSD windows that are outliers in the specified frequency band.
 
@@ -69,6 +86,7 @@ def remove_high_outliers(psd_array: Sequence[NDArray[np.floating]], freq_vec: ND
     non_outlier_idx = np.where(band_powers <= median + threshold * mad)[0]
     return non_outlier_idx
 
+
 def validate_event_sample(
     baseline: Baseline,
     pxx_windows: NDArray,
@@ -76,7 +94,7 @@ def validate_event_sample(
     f_lo=1.0,
     f_hi=5.0,
     mad_z_thresh=20.0,
-    min_consecutive=2
+    min_consecutive=2,
 ) -> tuple[bool, NDArray[np.bool], list[tuple[int, int]]]:
     """
     pxx_windows: array-like of shape (N_win, F) - PSDs for windows of an event

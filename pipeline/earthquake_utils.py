@@ -11,14 +11,25 @@ from pipeline.common import (
     preprocess,
     safe_resample,
     welch_psd,
-    validate_event_sample
+    validate_event_sample,
 )
 
-def _create_earthquake_psd(event_name: str, data: dict, fs_in: int, fs_out: int, overlap: float, delta_t: int, baseline: Baseline) -> Optional[dict[str, dict[str, Any]]]:
+
+def _create_earthquake_psd(
+    event_name: str,
+    data: dict,
+    fs_in: int,
+    fs_out: int,
+    overlap: float,
+    delta_t: int,
+    baseline: Baseline,
+) -> Optional[dict[str, dict[str, Any]]]:
     try:
         event_struct = data[event_name]
-        waveform: NDArray[np.floating] = event_struct["waveform"]["parost2_141929"][:, -1].astype(np.float64)
-        metadata: Dict[str, Any] = event_struct['metadata']
+        waveform: NDArray[np.floating] = event_struct["waveform"]["parost2_141929"][
+            :, -1
+        ].astype(np.float64)
+        metadata: Dict[str, Any] = event_struct["metadata"]
         # Resample waveform
         waveform = safe_resample(waveform, fs_in, fs_out)
 
@@ -39,11 +50,13 @@ def _create_earthquake_psd(event_name: str, data: dict, fs_in: int, fs_out: int,
 
         num_windows = (len(waveform) - window_size) // stride + 1
         if num_windows < 11:
-            tqdm.write(f"Skipping {event_name}: only {num_windows} windows (need at least 11)")
+            tqdm.write(
+                f"Skipping {event_name}: only {num_windows} windows (need at least 11)"
+            )
             return None
 
         # Compute PSDs for all windows
-        event_data: dict[str, dict[str, Any]] = {'metadata': metadata }
+        event_data: dict[str, dict[str, Any]] = {"metadata": metadata}
         freq_vec = None
 
         for i in range(num_windows):
@@ -57,12 +70,14 @@ def _create_earthquake_psd(event_name: str, data: dict, fs_in: int, fs_out: int,
                 freq_vec = f
 
         if freq_vec is None:
-            tqdm.write(f"Skipping {event_name}: Welch PSD failed to return frequency vectors)")
+            tqdm.write(
+                f"Skipping {event_name}: Welch PSD failed to return frequency vectors)"
+            )
             return None
 
-        pxx_windows = np.vstack([
-            v['power'] for k, v in event_data.items() if k.startswith('window_')
-        ])
+        pxx_windows = np.vstack(
+            [v["power"] for k, v in event_data.items() if k.startswith("window_")]
+        )
 
         accepted, _, _ = validate_event_sample(baseline, pxx_windows, freq_vec)
         if accepted:
@@ -73,7 +88,15 @@ def _create_earthquake_psd(event_name: str, data: dict, fs_in: int, fs_out: int,
         tqdm.write(f"Error processing {event_name}: {e}")
         raise e
 
-def process_earthquake_data(data: dict, fs_in: int, fs_out: int, overlap: float, delta_t: int, baseline: Baseline) -> dict[str, Any]:
+
+def process_earthquake_data(
+    data: dict,
+    fs_in: int,
+    fs_out: int,
+    overlap: float,
+    delta_t: int,
+    baseline: Baseline,
+) -> dict[str, Any]:
     event_names = list(data.keys())
     create_earthquake_psd = partial(
         _create_earthquake_psd,
@@ -82,7 +105,7 @@ def process_earthquake_data(data: dict, fs_in: int, fs_out: int, overlap: float,
         fs_out=fs_out,
         overlap=overlap,
         delta_t=delta_t,
-        baseline=baseline
+        baseline=baseline,
     )
     results = process_map(create_earthquake_psd, event_names)
     labeled_event_dicts = {}

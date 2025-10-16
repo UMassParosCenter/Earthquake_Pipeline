@@ -51,8 +51,12 @@ def _addWindNoise(
     omega = 2 * np.pi * f / V  #
 
     # von Kármán model
-    S = (V * (sigma**2) * (2 * L / np.pi) *
-         (1.0 + (1.339 * L * omega) ** 2) ** (-5.0 / 6.0))
+    S = (
+        V
+        * (sigma**2)
+        * (2 * L / np.pi)
+        * (1.0 + (1.339 * L * omega) ** 2) ** (-5.0 / 6.0)
+    )
 
     # Zero out frequencies outside range
     S[f < f_min] = 0.0
@@ -77,10 +81,17 @@ def _addWindNoise(
     # Add to base
     return base + p_mb
 
-def _create_background_psd(event_name: str, data: dict, fs_in: int, fs_out: int, overlap: float, delta_t: int) -> Optional[tuple[list[NDArray[np.floating]], dict[str, dict[str, NDArray[np.floating]]]]]:
+
+def _create_background_psd(
+    event_name: str, data: dict, fs_in: int, fs_out: int, overlap: float, delta_t: int
+) -> Optional[
+    tuple[list[NDArray[np.floating]], dict[str, dict[str, NDArray[np.floating]]]]
+]:
     try:
         event_struct = data[event_name]
-        waveform: NDArray[np.floating] = event_struct["waveform"]["parost2_141929"][:, -1].astype(np.float64)
+        waveform: NDArray[np.floating] = event_struct["waveform"]["parost2_141929"][
+            :, -1
+        ].astype(np.float64)
 
         # Resample waveform
         waveform = safe_resample(waveform, fs_in, fs_out)
@@ -107,7 +118,9 @@ def _create_background_psd(event_name: str, data: dict, fs_in: int, fs_out: int,
 
         num_windows = (len(waveform) - window_size) // stride + 1
         if num_windows < 11:
-            tqdm.write(f"Skipping {event_name}: only {num_windows} windows (need at least 11)")
+            tqdm.write(
+                f"Skipping {event_name}: only {num_windows} windows (need at least 11)"
+            )
             return None
 
         # Compute PSDs for all windows
@@ -124,11 +137,15 @@ def _create_background_psd(event_name: str, data: dict, fs_in: int, fs_out: int,
                 freq_vec = f
 
         if freq_vec is None:
-            tqdm.write(f"Skipping {event_name}: Welch PSD failed to return frequency vectors)")
+            tqdm.write(
+                f"Skipping {event_name}: Welch PSD failed to return frequency vectors)"
+            )
             return None
 
         # Check for high outliers
-        non_outlier_indices = remove_high_outliers(window_psds, freq_vec, f_lo=1.0, f_hi=5.0, threshold=4.0)
+        non_outlier_indices = remove_high_outliers(
+            window_psds, freq_vec, f_lo=1.0, f_hi=5.0, threshold=4.0
+        )
 
         if len(non_outlier_indices) < len(window_psds):
             tqdm.write(f"Skipping {event_name}: contains high outlier windows")
@@ -147,7 +164,10 @@ def _create_background_psd(event_name: str, data: dict, fs_in: int, fs_out: int,
         tqdm.write(f"Error processing {event_name}: {e}")
         raise e
 
-def process_background_data(data: dict, fs_in: int, fs_out: int, overlap: float, delta_t: int) -> tuple[NDArray[np.floating], dict[str, Any]]:
+
+def process_background_data(
+    data: dict, fs_in: int, fs_out: int, overlap: float, delta_t: int
+) -> tuple[NDArray[np.floating], dict[str, Any]]:
     event_names = list(data.keys())
     create_background_psd = partial(
         _create_background_psd,
@@ -168,7 +188,10 @@ def process_background_data(data: dict, fs_in: int, fs_out: int, overlap: float,
         labeled_event_dicts[f"event_{i:03d}"] = e
     return all_bg_psds, labeled_event_dicts
 
-def build_simple_baseline(bg_pxx_list: NDArray[np.floating], f: NDArray[np.floating], f_lo=1.0, f_hi=5.0) -> Baseline:
+
+def build_simple_baseline(
+    bg_pxx_list: NDArray[np.floating], f: NDArray[np.floating], f_lo=1.0, f_hi=5.0
+) -> Baseline:
     """
     Builds a baseline object containing the median and median absolute
     deviation of all provided band powers.
@@ -186,7 +209,9 @@ def build_simple_baseline(bg_pxx_list: NDArray[np.floating], f: NDArray[np.float
     bg = np.asarray(bg_pxx_list)
     mask = band_mask(f, f_lo, f_hi)
     df = np.median(np.diff(f))  # assumes uniform spacing
-    bg_band_powers: NDArray[np.floating] = np.sum(bg[:, mask] * df, axis=1)  # shape (N_bg,)
+
+    # shape (N_bg,)
+    bg_band_powers: NDArray[np.floating] = np.sum(bg[:, mask] * df, axis=1)
     med = np.median(bg_band_powers)
     mad = 1.4826 * np.median(np.abs(bg_band_powers - med)) + EPS
     return Baseline(f, med, mad, df)

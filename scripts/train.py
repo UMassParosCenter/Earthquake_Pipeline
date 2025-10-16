@@ -15,9 +15,15 @@ from scripts.constants import (
     N_EPOCHS,
     RADAM_TRAINING_RATE,
     REFERENCE_NPZ_PATH,
-    TRAINING_LOG_PATH
+    TRAINING_LOG_PATH,
 )
-from pipeline.dataset_utils import Reference, load_pickle_data, extract_psd_array, PSD_Dataset, EarlyStopping
+from pipeline.dataset_utils import (
+    Reference,
+    load_pickle_data,
+    extract_psd_array,
+    PSD_Dataset,
+    EarlyStopping,
+)
 from pipeline.cnn_model import EarthquakeCNN2d
 from tqdm import tqdm
 import csv
@@ -65,7 +71,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = EarthquakeCNN2d(input_shape=X.shape[1:]).to(device)
 criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
 optimizer = optim.RAdam(model.parameters(), lr=RADAM_TRAINING_RATE)
-early_stopping = EarlyStopping(patience=EARLY_STOPPING_PATIENCE, min_delta=EARLY_STOPPING_MIN_DELTA)
+early_stopping = EarlyStopping(
+    patience=EARLY_STOPPING_PATIENCE, min_delta=EARLY_STOPPING_MIN_DELTA
+)
 
 # Train model
 with open(TRAINING_LOG_PATH, mode="w", newline="") as log_file:

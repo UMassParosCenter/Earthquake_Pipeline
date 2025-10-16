@@ -6,12 +6,15 @@ import torch
 from torch.utils.data import Dataset
 from numpy.typing import NDArray
 
+
 @dataclass
-class Reference():
+class Reference:
     mean: NDArray
     std: NDArray
+
     def normalize(self, X: NDArray) -> NDArray:
         return (X - self.mean) / self.std
+
 
 class PSD_Dataset(Dataset):
     def __init__(self, X, y):
@@ -25,6 +28,7 @@ class PSD_Dataset(Dataset):
 
     def __getitem__(self, idx):
         return self.X[idx], self.y[idx]
+
 
 class EarlyStopping:
     def __init__(self, patience=5, min_delta=0.0):

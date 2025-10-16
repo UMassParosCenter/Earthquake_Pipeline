@@ -35,18 +35,21 @@ Date: 08/12/2025
 import torch
 import torch.nn as nn
 
+
 # --- Model Definition ---
 class ConvBlock2d(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size, pool_kernel=2, padding=None):
+    def __init__(
+        self, in_channels, out_channels, kernel_size, pool_kernel=2, padding=None
+    ):
         super().__init__()
-        
+
         # Automatically compute padding if not given
         if padding is None:
             if isinstance(kernel_size, tuple):
                 padding = tuple(k // 2 for k in kernel_size)
             else:
                 padding = kernel_size // 2
-        
+
         self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding)
         self.bn = nn.BatchNorm2d(out_channels)
         self.relu = nn.ReLU()
@@ -68,7 +71,7 @@ class EarthquakeCNN2d(nn.Module):
         # input_shape: (windows, freq_bins)
         self.conv1 = ConvBlock2d(1, 16, kernel_size=(5, 5))
         self.conv2 = ConvBlock2d(16, 32, kernel_size=(3, 5))  # more time context
-        
+
         # Calculate flattened feature size dynamically
         self.flatten_dim = self._get_flattened_size(input_shape)
 
