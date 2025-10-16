@@ -5,9 +5,12 @@ BOX_CONFIG_PATH = pathlib.Path("sensor_config.json")
 EARTHQUAKE_LOG_PATH = pathlib.Path("data/EarthQuakeData.csv")
 BACKGROUND_PSD_PKL = "data/BackgroundPSDs.pkl"
 EARTHQUAKE_PSD_PKL = "data/EarthquakePSDs.pkl"
-TRAINING_LOG_PATH = "data/model_output/TrainingLog.csv"
-REFERENCE_NPZ_PATH = "data/model_output/Reference.npz"
-MODEL_PTH_PATH = "data/model_output/CNNmodel.pth"
+TRAINING_LOG_PATH = "data/model/TrainingLog.csv"
+REFERENCE_NPZ_PATH = "data/model/Reference.npz"
+MODEL_PTH_PATH = "data/model/CNNmodel.pth"
+
+# Output
+INFERENCE_EXPORT_PATH = "data/output/"
 
 # PSD parameters
 BACKGROUND_BUFFER_HOURS = 1
