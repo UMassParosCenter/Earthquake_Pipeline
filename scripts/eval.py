@@ -1,11 +1,10 @@
 import csv
 from datetime import datetime
 from pathlib import Path
+
 import numpy as np
 
-
 from pipeline import eval_utils, event_catalog_utils
-from pipeline.dataset_utils import Reference
 from scripts.constants import (
     BOX_CONFIG_PATH,
     INFERENCE_EXPORT_PATH,
@@ -19,23 +18,22 @@ from scripts.constants import (
 box = event_catalog_utils.load_box_config(BOX_CONFIG_PATH)
 
 reference_npz: np.lib.npyio.NpzFile = np.load(REFERENCE_NPZ_PATH)
-reference = Reference(reference_npz["mean"], reference_npz["std"])
 reference_npz.close()
 
 # Start and end times for inference
 start_time = datetime(2025, 5, 5, 0, 0, 0, tzinfo=None)
 end_time = datetime(2025, 5, 5, 23, 59, 59, tzinfo=None)
+# end_time = datetime(2025, 5, 5, 0, 10, 10, tzinfo=None)
 
 results: list[eval_utils.Inference] = eval_utils.infer_timerange(
     start_time,
     end_time,
     MODEL_PTH_PATH,
-    reference,
     box.sample_rate_hz,
     SAMPLE_RATE_HZ,
     WINDOW_LENGTH_SEC,
     WINDOW_OVERLAP,
-    box,
+    box
 )
 Path(INFERENCE_EXPORT_PATH).mkdir(parents=True, exist_ok=True)
 log_path = (

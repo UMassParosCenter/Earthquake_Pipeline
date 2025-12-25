@@ -4,4 +4,4 @@ version = "1.0"
 
 [tool.pyright]
 typeCheckingMode = "standard"
-useLibraryCodeForTypes = false
+# useLibraryCodeForTypes = false
