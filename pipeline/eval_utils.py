@@ -1,3 +1,4 @@
+import functools
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import partial
@@ -39,15 +40,32 @@ class Inference:
             self.prob_eq,
         ]
 
+def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
+  seg_start = time
+  seg_end = seg_start + timedelta(seconds=event_duration)
+  data = query_influx_data(
+              start_time=seg_start.isoformat(timespec="seconds"),
+              end_time=seg_end.isoformat(timespec="seconds"),
+              box_id=box_config.box_id,
+              sensor_id=box_config.sensor_id,
+              password=box_config.password,
+          )
+  key = f"{box_config.box_id}_{box_config.sensor_id}"
+  waveform = data.get(key)
+  if waveform is None or waveform.empty:
+      print(f"No data for window {seg_start} to {seg_end}")
+      return
+
+  samples = waveform["value"].values
+  w = safe_resample(samples, box_config.sample_rate_hz, fs_out)
+  return (seg_start, seg_end, create_spectrogram(w, fs_out, 256, 0.12))
 
 def infer_timerange(
     start_time: datetime,
     end_time: datetime,
     model_pth_path: str,
-    fs_in: int,
     fs_out: int,
-    window_duration: int,
-    overlap: float,
+    event_duration: int,
     box_config: BoxConfig,
 ) -> list[Inference]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -58,32 +76,14 @@ def infer_timerange(
 
     times: list = []
 
-    event_duration = 90
-
     current_time = start_time
     while current_time + timedelta(seconds=event_duration) <= end_time:
         times.append(current_time)
         current_time += timedelta(seconds=event_duration)
-    windows = []
-    for time in times:
-      seg_start = time
-      seg_end = seg_start + timedelta(seconds=event_duration)
-      data = query_influx_data(
-                  start_time=seg_start.isoformat(timespec="seconds"),
-                  end_time=seg_end.isoformat(timespec="seconds"),
-                  box_id=box_config.box_id,
-                  sensor_id=box_config.sensor_id,
-                  password=box_config.password,
-              )
-      key = f"{box_config.box_id}_{box_config.sensor_id}"
-      waveform = data.get(key)
-      if waveform is None or waveform.empty:
-          print(f"No data for window {seg_start} to {seg_end}")
-          continue
 
-      samples = waveform["value"].values
-      w = safe_resample(samples, fs_in, fs_out)
-      windows.append((seg_start, seg_end, create_spectrogram(w, fs_out, 256, 0.12)))
+    windows = []
+    spectrogram_func = functools.partial(spectrogram_for_window, event_duration=event_duration, fs_out=fs_out, box_config=box_config)
+    windows = process_map(spectrogram_func, times)
 
     results = []
     window_start: datetime

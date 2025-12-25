@@ -7,6 +7,8 @@ import numpy as np
 from pipeline import eval_utils, event_catalog_utils
 from scripts.constants import (
     BOX_CONFIG_PATH,
+    EVENT_AFTER_SEC,
+    EVENT_BEFORE_SEC,
     INFERENCE_EXPORT_PATH,
     MODEL_PTH_PATH,
     REFERENCE_NPZ_PATH,
@@ -29,10 +31,8 @@ results: list[eval_utils.Inference] = eval_utils.infer_timerange(
     start_time,
     end_time,
     MODEL_PTH_PATH,
-    box.sample_rate_hz,
     SAMPLE_RATE_HZ,
-    WINDOW_LENGTH_SEC,
-    WINDOW_OVERLAP,
+    EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
     box
 )
 Path(INFERENCE_EXPORT_PATH).mkdir(parents=True, exist_ok=True)
