@@ -13,8 +13,6 @@ from scripts.constants import (
     MODEL_PTH_PATH,
     REFERENCE_NPZ_PATH,
     SAMPLE_RATE_HZ,
-    WINDOW_LENGTH_SEC,
-    WINDOW_OVERLAP,
 )
 
 box = event_catalog_utils.load_box_config(BOX_CONFIG_PATH)
@@ -33,7 +31,7 @@ results: list[eval_utils.Inference] = eval_utils.infer_timerange(
     MODEL_PTH_PATH,
     SAMPLE_RATE_HZ,
     EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
-    box
+    box,
 )
 Path(INFERENCE_EXPORT_PATH).mkdir(parents=True, exist_ok=True)
 log_path = (

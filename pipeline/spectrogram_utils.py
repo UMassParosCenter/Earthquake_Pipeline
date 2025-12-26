@@ -11,15 +11,13 @@ from pipeline.common import safe_resample
 
 def create_spectrogram(
     w: NDArray, fs: int, nperseg: int, overlap: float
-) -> Optional[
-  np.ndarray
-]:
+) -> Optional[np.ndarray]:
     try:
         waveform = signal.detrend(w)
         n_samples: int = len(waveform)
         taper_len: int = int(n_samples * 0.01)
         if taper_len % 2 != 0:
-          taper_len += 1
+            taper_len += 1
 
         # Hann window at the edges (Tukey)
         tukey_window: NDArray[np.floating] = signal.windows.tukey(n_samples, 0.01)
@@ -29,12 +27,12 @@ def create_spectrogram(
         waveform = signal.sosfilt(filter, waveform)
 
         f, t, Sxx = signal.spectrogram(
-          waveform,
-          100,
-          nperseg=nperseg,
-          noverlap=round(nperseg * overlap),
-          scaling='density',
-          mode='magnitude'
+            waveform,
+            100,
+            nperseg=nperseg,
+            noverlap=round(nperseg * overlap),
+            scaling="density",
+            mode="magnitude",
         )
 
         freq_mask = (f >= 1.0) & (f <= 20.0)
@@ -56,7 +54,12 @@ def create_spectrogram(
 
 
 def process_data(
-    data: dict, fs_in: int, fs_out: int, nperseg: int, overlap: float, expected_event_length_sec: int
+    data: dict,
+    fs_in: int,
+    fs_out: int,
+    nperseg: int,
+    overlap: float,
+    expected_event_length_sec: int,
 ):
     event_names = list(data.keys())
     _create_spectrogram = partial(
@@ -68,18 +71,18 @@ def process_data(
     waveforms = []
     lens = []
     for e in event_names:
-      event_struct = data[e]
-      waveform: NDArray[np.floating] = event_struct["waveform"]["parost2_141929"][
-          :, -1
-      ].astype(np.float64)
+        event_struct = data[e]
+        waveform: NDArray[np.floating] = event_struct["waveform"]["parost2_141929"][
+            :, -1
+        ].astype(np.float64)
 
-      # Resample waveform
-      waveform = safe_resample(waveform, fs_in, fs_out)
+        # Resample waveform
+        waveform = safe_resample(waveform, fs_in, fs_out)
 
-      if (len(waveform) != expected_event_length_sec * fs_out):
-        continue
-      waveforms.append(waveform)
-      lens.append(len(waveform))
+        if len(waveform) != expected_event_length_sec * fs_out:
+            continue
+        waveforms.append(waveform)
+        lens.append(len(waveform))
 
     # import pdb; pdb.set_trace()
     spectrograms = [_create_spectrogram(w) for w in waveforms]

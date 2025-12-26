@@ -56,7 +56,7 @@ def _read_background_window(
             "waveform": data_arrays,
             "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
         }
-    except Exception as e:
+    except Exception:
         return None
 
 
@@ -166,7 +166,7 @@ def _read_earthquake_window(
 
         return {"waveform": data_arrays, "metadata": metadata}
 
-    except Exception as e:
+    except Exception:
         # tqdm.write(f"[Error] Event {idx + 1} failed: {e}")
         return None
 

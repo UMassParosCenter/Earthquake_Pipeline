@@ -32,21 +32,21 @@ background_windows = event_catalog_utils.generate_background_data(
 )
 
 eq = spectrogram_utils.process_data(
-  earthquake_windows,
-  box.sample_rate_hz,
-  SAMPLE_RATE_HZ,
-  256,
-  0.12,
-  EVENT_BEFORE_SEC + EVENT_AFTER_SEC
+    earthquake_windows,
+    box.sample_rate_hz,
+    SAMPLE_RATE_HZ,
+    256,
+    0.12,
+    EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
 )
 
 bg = spectrogram_utils.process_data(
-  background_windows,
-  box.sample_rate_hz,
-  SAMPLE_RATE_HZ,
-  256,
-  0.12,
-  EVENT_BEFORE_SEC + EVENT_AFTER_SEC
+    background_windows,
+    box.sample_rate_hz,
+    SAMPLE_RATE_HZ,
+    256,
+    0.12,
+    EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
 )
 
 print(f"Saved {len(eq)} earthquake and {len(bg)} background events")
