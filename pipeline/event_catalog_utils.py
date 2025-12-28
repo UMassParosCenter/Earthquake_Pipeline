@@ -32,7 +32,7 @@ def load_box_config(json_path: pathlib.Path) -> BoxConfig:
     )
 
 
-def _read_background_window(
+def read_background_window(
     timestamp: pd.Timestamp,
     time_before: timedelta,
     time_after: timedelta,
@@ -89,15 +89,15 @@ def generate_background_data(
 
     selected_hours = pd.DatetimeIndex(random.choice(valid_hours, real_samples, False))
 
-    read_background_window = partial(
-        _read_background_window,
+    read_func = partial(
+        read_background_window,
         time_before=timedelta(seconds=seconds_before),
         time_after=timedelta(seconds=seconds_after),
         box=box_config,
     )
 
     events = process_map(
-        read_background_window,
+        read_func,
         [timestamp for timestamp in selected_hours.sort_values()],
     )
     events[:] = [e for e in events if e is not None]
@@ -120,7 +120,7 @@ def _surface_wave_delay(
     return dist_km / vsurface
 
 
-def _read_earthquake_window(
+def read_earthquake_window(
     idx: int,
     df: pd.DataFrame,
     station_lat: float,
@@ -196,8 +196,8 @@ def generate_earthquake_data(
     earthquake_data = EarthquakeCatalog(earthquake_log)
     station_lat, station_lon = 24.07396028832464, 121.1286975322632
 
-    read_earthquake_window = partial(
-        _read_earthquake_window,
+    read_func = partial(
+        read_earthquake_window,
         df=earthquake_data.df,
         station_lat=station_lat,
         station_lon=station_lon,
@@ -205,7 +205,7 @@ def generate_earthquake_data(
         time_after=timedelta(seconds=seconds_after),
         box=box_config,
     )
-    events = process_map(read_earthquake_window, range(0, len(earthquake_data.df)))
+    events = process_map(read_func, range(0, len(earthquake_data.df)))
     events[:] = [e for e in events if e is not None]
     data = {}
     for i, e in enumerate(events):
