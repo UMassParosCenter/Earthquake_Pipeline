@@ -22,6 +22,7 @@ print("Generating background data")
 earthquake_windows = event_catalog_utils.generate_earthquake_data(
     EARTHQUAKE_LOG_PATH, box, EVENT_BEFORE_SEC, EVENT_AFTER_SEC
 )
+
 background_windows = event_catalog_utils.generate_background_data(
     EARTHQUAKE_LOG_PATH,
     box,

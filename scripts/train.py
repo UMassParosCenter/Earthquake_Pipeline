@@ -6,8 +6,10 @@ import torch
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from torch import nn
+from torch.nn.modules.loss import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
+from torch.utils.data.sampler import WeightedRandomSampler
 
 from pipeline.cnn_utils import Spectrogram_Dataset, SpectrogramCNN
 from scripts.constants import (
@@ -28,6 +30,7 @@ with open(BACKGROUND_DATA_PKL, "rb") as f:
 eq_array = list(eq_dict.values())
 bg_array = list(bg_dict.values())
 
+print(f'Loaded {len(eq_array)} EQ samples and {len(bg_array)} BG samples')
 
 spectrograms = [np.asarray(s, dtype=np.float32) for s in eq_array]
 
@@ -44,8 +47,19 @@ dataset = Spectrogram_Dataset(X, y)
 train_set = Subset(dataset, train_idx)
 val_set = Subset(dataset, val_idx)
 
-train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
-val_loader = DataLoader(val_set, batch_size=32, shuffle=True)
+train_labels = y[train_idx]
+class_n = np.bincount(train_labels)
+class_weights = 1.0 / class_n
+sample_weights = class_weights[train_labels]
+
+sampler = WeightedRandomSampler(
+  weights=sample_weights,
+  num_samples=len(sample_weights),
+  replacement=True
+)
+
+train_loader = DataLoader(train_set, batch_size=128, sampler=sampler)
+val_loader = DataLoader(val_set, batch_size=128, shuffle=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = SpectrogramCNN().to(device)
@@ -53,7 +67,23 @@ model = SpectrogramCNN().to(device)
 class_weights = compute_class_weight("balanced", classes=np.unique(y), y=y)
 class_weights = torch.tensor(class_weights, dtype=torch.float32)
 
-criterion = nn.CrossEntropyLoss(weight=class_weights.to(device))
+# class FocalLoss(nn.Module):
+#     def __init__(self, alpha=0.25, gamma=2.0):
+#         """
+#         alpha: weight for positive class
+#         gamma: focusing parameter
+#         """
+#         super().__init__()
+#         self.alpha = alpha
+#         self.gamma = gamma
+
+#     def forward(self, inputs, targets):
+#         ce_loss = torch.nn.functional.cross_entropy(inputs, targets, reduction='none')
+#         pt = torch.exp(-ce_loss)
+#         focal_loss = self. alpha * (1 - pt) ** self.gamma * ce_loss
+#         return focal_loss.mean()
+
+criterion = CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 for epoch in range(1, 70):
