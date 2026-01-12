@@ -9,7 +9,6 @@ from scipy import signal
 from pipeline import event_catalog_utils
 from pipeline.common import safe_resample
 from pipeline.event_catalog_utils import read_background_window
-from scripts import constants
 from scripts.constants import (
     BOX_CONFIG_PATH,
     EVENT_AFTER_SEC,
