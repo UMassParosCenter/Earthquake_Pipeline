@@ -12,6 +12,7 @@ from torch.utils.data.dataset import Subset
 from torch.utils.data.sampler import WeightedRandomSampler
 
 from pipeline.cnn_utils import Spectrogram_Dataset, SpectrogramCNN
+from scripts import constants
 from scripts.constants import (
     BACKGROUND_DATA_PKL,
     EARTHQUAKE_DATA_PKL,
@@ -68,9 +69,9 @@ class_weights = compute_class_weight("balanced", classes=np.unique(y), y=y)
 class_weights = torch.tensor(class_weights, dtype=torch.float32)
 
 criterion = CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), constants.RADAM_TRAINING_RATE)
 
-for epoch in range(1, 70):
+for epoch in range(1, constants.N_EPOCHS):
     model.train()
     running_loss = 0.0
     correct = 0
