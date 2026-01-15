@@ -67,22 +67,6 @@ model = SpectrogramCNN().to(device)
 class_weights = compute_class_weight("balanced", classes=np.unique(y), y=y)
 class_weights = torch.tensor(class_weights, dtype=torch.float32)
 
-# class FocalLoss(nn.Module):
-#     def __init__(self, alpha=0.25, gamma=2.0):
-#         """
-#         alpha: weight for positive class
-#         gamma: focusing parameter
-#         """
-#         super().__init__()
-#         self.alpha = alpha
-#         self.gamma = gamma
-
-#     def forward(self, inputs, targets):
-#         ce_loss = torch.nn.functional.cross_entropy(inputs, targets, reduction='none')
-#         pt = torch.exp(-ce_loss)
-#         focal_loss = self. alpha * (1 - pt) ** self.gamma * ce_loss
-#         return focal_loss.mean()
-
 criterion = CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
