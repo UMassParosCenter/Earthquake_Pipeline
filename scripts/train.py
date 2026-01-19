@@ -11,7 +11,7 @@ from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
 from torch.utils.data.sampler import WeightedRandomSampler
 
-from pipeline.cnn_utils import Spectrogram_Dataset, SpectrogramCNN
+from pipeline.cnn_utils import EarlyStopping, Spectrogram_Dataset, SpectrogramCNN
 from scripts import constants
 from scripts.constants import (
     BACKGROUND_DATA_PKL,
@@ -71,6 +71,10 @@ class_weights = torch.tensor(class_weights, dtype=torch.float32)
 criterion = CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), constants.RADAM_TRAINING_RATE)
 
+early_stopping = EarlyStopping(
+    patience=constants.EARLY_STOPPING_PATIENCE, min_delta=constants.EARLY_STOPPING_MIN_DELTA
+)
+
 for epoch in range(1, constants.N_EPOCHS):
     model.train()
     running_loss = 0.0
@@ -120,6 +124,11 @@ for epoch in range(1, constants.N_EPOCHS):
         f"Train Loss: {train_loss:.4f} Acc: {train_acc:.3f} | "
         f"Val Loss: {val_loss:.4f} Acc: {val_acc:.3f}"
     )
+
+    early_stopping(train_loss)
+    if early_stopping.early_stop:
+        print("Early stopping triggered.")
+        break
 
 torch.save(model.state_dict(), MODEL_PTH_PATH)
 print(f"Training complete. Model saved to {MODEL_PTH_PATH}")

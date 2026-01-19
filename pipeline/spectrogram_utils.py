@@ -20,7 +20,7 @@ def create_spectrogram(
             taper_len += 1
 
         # Hann window at the edges (Tukey)
-        tukey_window: NDArray[np.floating] = signal.windows.tukey(n_samples, 0.01)
+        tukey_window: NDArray[np.floating] = signal.windows.tukey(n_samples, 0.2)
         waveform *= tukey_window
 
         filter = signal.butter(4, 1.0, "high", fs=fs, output="sos")

@@ -9,12 +9,21 @@ from scipy import signal
 from pipeline import event_catalog_utils
 from pipeline.common import safe_resample
 from pipeline.event_catalog_utils import read_background_window
+from pipeline.spectrogram_utils import create_spectrogram
 from scripts.constants import (
     BOX_CONFIG_PATH,
     EVENT_AFTER_SEC,
     EVENT_BEFORE_SEC,
     SAMPLE_RATE_HZ,
 )
+
+"""
+To look at:
+  [] Data augmentation (reusing samples with random noise added?)
+  [] Artifacts at beginning and end of each time series
+  [] Increasing the resolution of the spectrograms somehow?
+  [] Log the real samples used when making dataset to use with viewer
+"""
 
 assert len(sys.argv) == 2, "Wrong number of args, provide one datetime to view"
 
@@ -41,7 +50,7 @@ if taper_len % 2 != 0:
     taper_len += 1
 
 # Hann window at the edges (Tukey)
-tukey_window = signal.windows.tukey(n_samples, 0.01)
+tukey_window = signal.windows.tukey(n_samples, 0.2)
 waveform *= tukey_window
 
 filter = signal.butter(4, 1.0, "high", fs=SAMPLE_RATE_HZ, output="sos")
@@ -54,6 +63,8 @@ new_dt = np.linspace(
     num=len(waveform)
 ).astype('datetime64[ns]')
 
+Sxx_log = create_spectrogram(waveform, SAMPLE_RATE_HZ, 256, 0.12)
+plt.imshow(Sxx_log, interpolation='none')
 
 fig_dpi = 100
 fig, axes = plt.subplots(1, figsize=(1254/ fig_dpi, 1486 / fig_dpi), dpi = fig_dpi)

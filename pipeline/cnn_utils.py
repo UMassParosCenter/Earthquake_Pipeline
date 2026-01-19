@@ -18,6 +18,25 @@ class Spectrogram_Dataset(Dataset):
         label = self.y[idx]
         return spec, label
 
+class EarlyStopping:
+    def __init__(self, patience=5, min_delta=0.0):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.counter = 0
+        self.best_loss = None
+        self.early_stop = False
+
+    def __call__(self, loss: float) -> None:
+        if self.best_loss is None:
+            self.best_loss = loss
+            return
+        if loss < self.best_loss - self.min_delta:
+            self.best_loss = loss
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                self.early_stop = True
 
 class SpectrogramCNN(nn.Module):
     def __init__(self, dropout_rate=0.3) -> None:
