@@ -39,54 +39,75 @@ class EarlyStopping:
                 self.early_stop = True
 
 class SpectrogramCNN(nn.Module):
-    def __init__(self, dropout_rate=0.3) -> None:
-        super().__init__()
+  def __init__(self, dropout_rate=0.3):
+    super().__init__()
 
-        self.features = Sequential(
-            # First conv block
-            nn.Conv2d(1, 18, kernel_size=3, padding="same"),
-            nn.BatchNorm2d(18),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d((2, 2)),
-            nn. Dropout2d(p=dropout_rate),
+    # Feature extraction (works with any input size)
+    self.features = nn.Sequential(
+        # Block 1
+        nn.Conv2d(1, 32, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(32),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(32, 32, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(32),
+        nn.ReLU(inplace=True),
+        nn.MaxPool2d((2, 2)),
+        nn.Dropout2d(p=dropout_rate),
 
-            # Second conv block
-            nn.Conv2d(18, 36, kernel_size=3, padding="same"),
-            nn.BatchNorm2d(36),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d((2, 2)),
-            nn.Dropout2d(p=dropout_rate),
+        # Block 2
+        nn. Conv2d(32, 64, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(64),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(64, 64, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(64),
+        nn.ReLU(inplace=True),
+        nn.MaxPool2d((2, 2)),
+        nn.Dropout2d(p=dropout_rate),
 
-            # Third conv block
-            nn.Conv2d(36, 54, kernel_size=3, padding="same"),
-            nn.BatchNorm2d(54),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d((2, 2)),
-            nn.Dropout2d(p=dropout_rate),
+        # Block 3
+        nn.Conv2d(64, 128, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(128),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(128, 128, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(128),
+        nn.ReLU(inplace=True),
+        nn.MaxPool2d((2, 2)),
+        nn.Dropout2d(p=dropout_rate),
 
-            # Fourth conv block
-            nn.Conv2d(54, 54, kernel_size=3, padding="same"),
-            nn.BatchNorm2d(54),
-            nn.ReLU(inplace=True),
-            nn.MaxPool2d((2, 2)),
-            nn.Dropout2d(p=dropout_rate),
-        )
+        # Block 4
+        nn.Conv2d(128, 256, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(256),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(256, 256, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(256),
+        nn.ReLU(inplace=True),
+        nn.MaxPool2d((2, 2)),
+        nn.Dropout2d(p=dropout_rate),
+    )
 
-        # Calculate flattened feature size
-        test = torch.zeros(1, 1, 49, 39)
-        with torch.no_grad():
-            test = self.features(test)
-            test = test.view(test.size(0), -1)
+    # Global pooling (handles any spatial size)
+    self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
+    self.global_max_pool = nn.AdaptiveMaxPool2d((1, 1))
 
-        # Classifier with additional hidden layer and dropout
-        self.classifier = Sequential(
-            nn.Linear(test.shape[1], 128),
-            nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
-            nn.Linear(128, 2)
-        )
+    # Classifier (input size is always 256*2 regardless of input image size)
+    self.classifier = nn.Sequential(
+        nn. Linear(256 * 2, 512),  # *2 for avg + max pooling
+        nn.ReLU(inplace=True),
+        nn.Dropout(p=0.5),
+        nn.Linear(512, 128),
+        nn.ReLU(inplace=True),
+        nn.Dropout(p=0.5),
+        nn.Linear(128, 2)
+    )
 
-    def forward(self, x):
-        x = self.features(x)
-        x = x.view(x.size(0), -1)
-        return self.classifier(x)
+  def forward(self, x):
+      # Feature extraction
+      x = self.features(x)
+
+      # Global pooling (works with any spatial size)
+      avg_pool = self.global_avg_pool(x).view(x.size(0), -1)
+      max_pool = self.global_max_pool(x).view(x.size(0), -1)
+      x = torch.cat([avg_pool, max_pool], dim=1)
+
+      # Classification
+      return self.classifier(x)

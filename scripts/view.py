@@ -14,6 +14,8 @@ from scripts.constants import (
     BOX_CONFIG_PATH,
     EVENT_AFTER_SEC,
     EVENT_BEFORE_SEC,
+    NPERSEG,
+    OVERLAP,
     SAMPLE_RATE_HZ,
 )
 
@@ -63,7 +65,7 @@ new_dt = np.linspace(
     num=len(waveform)
 ).astype('datetime64[ns]')
 
-Sxx_log = create_spectrogram(waveform, SAMPLE_RATE_HZ, 256, 0.12)
+Sxx_log = create_spectrogram(waveform, SAMPLE_RATE_HZ, NPERSEG, OVERLAP)
 plt.imshow(Sxx_log, interpolation='none')
 
 fig_dpi = 100

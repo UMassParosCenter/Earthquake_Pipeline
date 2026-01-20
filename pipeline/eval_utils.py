@@ -12,6 +12,7 @@ from pipeline.cnn_utils import SpectrogramCNN
 from pipeline.common import safe_resample
 from pipeline.event_catalog_utils import BoxConfig
 from pipeline.spectrogram_utils import create_spectrogram
+from scripts.constants import NPERSEG, OVERLAP
 
 
 @dataclass
@@ -58,7 +59,7 @@ def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
 
     samples = waveform["value"].values
     w = safe_resample(samples, box_config.sample_rate_hz, fs_out)
-    return (seg_start, seg_end, create_spectrogram(w, fs_out, 256, 0.12))
+    return (seg_start, seg_end, create_spectrogram(w, fs_out, NPERSEG, OVERLAP))
 
 
 def infer_timerange(

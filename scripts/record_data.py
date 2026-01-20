@@ -10,6 +10,8 @@ from scripts.constants import (
     EVENT_AFTER_SEC,
     EVENT_BEFORE_SEC,
     N_BACKGROUND_SAMPLES,
+    NPERSEG,
+    OVERLAP,
     SAMPLE_RATE_HZ,
 )
 
@@ -38,8 +40,8 @@ eq = spectrogram_utils.process_data(
     earthquake_windows,
     box.sample_rate_hz,
     SAMPLE_RATE_HZ,
-    256,
-    0.12,
+    NPERSEG,
+    OVERLAP,
     EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
 )
 
@@ -48,8 +50,8 @@ bg = spectrogram_utils.process_data(
     background_windows,
     box.sample_rate_hz,
     SAMPLE_RATE_HZ,
-    256,
-    0.12,
+    NPERSEG,
+    OVERLAP,
     EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
 )
 

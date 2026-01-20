@@ -21,6 +21,9 @@ SAMPLE_RATE_HZ = 100
 WINDOW_OVERLAP = 0.5
 WINDOW_LENGTH_SEC = 10
 
+# Spectrogram paramters
+NPERSEG = 1000
+OVERLAP = 0.75
 
 # Training parameters
 RADAM_TRAINING_RATE = 1e-3

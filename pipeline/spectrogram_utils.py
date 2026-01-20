@@ -7,6 +7,7 @@ from scipy import signal
 from tqdm import tqdm
 
 from pipeline.common import safe_resample
+from scripts.constants import SAMPLE_RATE_HZ
 
 
 def create_spectrogram(
@@ -28,14 +29,14 @@ def create_spectrogram(
 
         f, t, Sxx = signal.spectrogram(
             waveform,
-            100,
+            SAMPLE_RATE_HZ,
             nperseg=nperseg,
             noverlap=round(nperseg * overlap),
             scaling="density",
-            mode="magnitude",
+            mode="psd",
         )
 
-        freq_mask = (f >= 1.0) & (f <= 20.0)
+        freq_mask = (f >= 1.0) & (f <= 10.0)
         Sxx_cropped = Sxx[freq_mask, :]
 
         Sxx_log = np.log10(Sxx_cropped + 1e-12)
