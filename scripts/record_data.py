@@ -17,12 +17,13 @@ from scripts.constants import (
 box = event_catalog_utils.load_box_config(BOX_CONFIG_PATH)
 
 # Generate windows for background and earthquake data
-print("Generating background data")
+print("Generating earthquake data")
 
 earthquake_windows = event_catalog_utils.generate_earthquake_data(
     EARTHQUAKE_LOG_PATH, box, EVENT_BEFORE_SEC, EVENT_AFTER_SEC
 )
 
+print("Generating background data")
 background_windows = event_catalog_utils.generate_background_data(
     EARTHQUAKE_LOG_PATH,
     box,
@@ -32,6 +33,7 @@ background_windows = event_catalog_utils.generate_background_data(
     EVENT_AFTER_SEC,
 )
 
+print("Processing earthquake data")
 eq = spectrogram_utils.process_data(
     earthquake_windows,
     box.sample_rate_hz,
@@ -41,6 +43,7 @@ eq = spectrogram_utils.process_data(
     EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
 )
 
+print("Processing background data")
 bg = spectrogram_utils.process_data(
     background_windows,
     box.sample_rate_hz,

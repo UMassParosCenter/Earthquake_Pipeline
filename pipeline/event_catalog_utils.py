@@ -84,23 +84,28 @@ def generate_background_data(
     # Pandas' DatetimeIndex.union returns an Index[Any] for some reason
     valid_hours = all_hours.difference(excluded).unique()  # type: ignore
 
-    real_samples = min(num_samples, len(valid_hours))
-    random = np.random.default_rng()
+    events = []
+    while len(events) < num_samples:
+      real_samples = min(max(num_samples - len(events), 100), len(valid_hours))
+      print(f'{len(events)} stored. Attempting to pull {real_samples} more events.')
+      random = np.random.default_rng()
 
-    selected_hours = pd.DatetimeIndex(random.choice(valid_hours, real_samples, False))
+      selected_hours = pd.DatetimeIndex(random.choice(valid_hours, real_samples, False))
+      valid_hours = valid_hours.difference(selected_hours)
 
-    read_func = partial(
-        read_background_window,
-        time_before=timedelta(seconds=seconds_before),
-        time_after=timedelta(seconds=seconds_after),
-        box=box_config,
-    )
+      read_func = partial(
+          read_background_window,
+          time_before=timedelta(seconds=seconds_before),
+          time_after=timedelta(seconds=seconds_after),
+          box=box_config,
+      )
 
-    events = process_map(
-        read_func,
-        [timestamp for timestamp in selected_hours.sort_values()],
-    )
-    events[:] = [e for e in events if e is not None]
+      new_events = process_map(
+          read_func,
+          [timestamp for timestamp in selected_hours.sort_values()],
+      )
+      new_events[:] = [e for e in new_events if e is not None]
+      events += new_events
 
     data = {}
     for i, e in enumerate(events):
@@ -212,5 +217,5 @@ def generate_earthquake_data(
     for i, e in enumerate(events):
         data[f"event{i:04d}"] = e
         arrival_time.append(e['delay'])
-    print(arrival_time)
+    # print(arrival_time)
     return data

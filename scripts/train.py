@@ -59,8 +59,8 @@ sampler = WeightedRandomSampler(
   replacement=True
 )
 
-train_loader = DataLoader(train_set, batch_size=128, sampler=sampler)
-val_loader = DataLoader(val_set, batch_size=128, shuffle=True)
+train_loader = DataLoader(train_set, batch_size=512, sampler=sampler)
+val_loader = DataLoader(val_set, batch_size=512, shuffle=False)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = SpectrogramCNN().to(device)
@@ -74,6 +74,8 @@ optimizer = torch.optim.Adam(model.parameters(), constants.RADAM_TRAINING_RATE)
 early_stopping = EarlyStopping(
     patience=constants.EARLY_STOPPING_PATIENCE, min_delta=constants.EARLY_STOPPING_MIN_DELTA
 )
+
+best_score = None
 
 for epoch in range(1, constants.N_EPOCHS):
     model.train()
@@ -125,10 +127,11 @@ for epoch in range(1, constants.N_EPOCHS):
         f"Val Loss: {val_loss:.4f} Acc: {val_acc:.3f}"
     )
 
-    early_stopping(train_loss)
+    early_stopping(val_loss)
+    if best_score is None or val_loss < best_score:
+      torch.save(model.state_dict(), MODEL_PTH_PATH)
     if early_stopping.early_stop:
         print("Early stopping triggered.")
         break
 
-torch.save(model.state_dict(), MODEL_PTH_PATH)
 print(f"Training complete. Model saved to {MODEL_PTH_PATH}")

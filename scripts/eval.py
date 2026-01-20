@@ -21,8 +21,8 @@ reference_npz: np.lib.npyio.NpzFile = np.load(REFERENCE_NPZ_PATH)
 reference_npz.close()
 
 # Start and end times for inference
-start_time = datetime(2025, 7, 7, 0, 0, 0, tzinfo=None)
-end_time = datetime(2025, 7, 7, 23, 59, 59, tzinfo=None)
+start_time = datetime(2025, 5, 5, 0, 0, 0, tzinfo=None)
+end_time = datetime(2025, 5, 5, 23, 59, 59, tzinfo=None)
 # end_time = datetime(2025, 5, 5, 0, 10, 10, tzinfo=None)
 
 results: list[eval_utils.Inference] = eval_utils.infer_timerange(
