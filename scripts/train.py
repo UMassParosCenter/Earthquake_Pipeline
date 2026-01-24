@@ -3,6 +3,13 @@ from typing import Dict
 
 import numpy as np
 import torch
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    f1_score,
+    precision_score,
+    recall_score,
+)
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
 from torch import nn
@@ -133,5 +140,51 @@ for epoch in range(1, constants.N_EPOCHS):
     if early_stopping.early_stop:
         print("Early stopping triggered.")
         break
+
+model.eval()
+running_loss = 0.0
+all_preds = []
+all_labels = []
+all_probs = []
+
+test_loader = DataLoader(dataset, batch_size=2056, shuffle=False)
+
+with torch.no_grad():
+    for X_batch, y_batch in test_loader:
+        X_batch = X_batch.to(device)
+        y_batch = y_batch.to(device)
+
+        logits = model(X_batch)
+        loss = criterion(logits, y_batch)
+
+        # Get predictions and probabilities
+        probs = torch.softmax(logits, dim=1)
+        preds = logits.argmax(dim=1)
+
+        running_loss += loss.item() * X_batch.size(0)
+        all_preds. extend(preds.cpu().numpy())
+        all_labels.extend(y_batch.cpu().numpy())
+        all_probs. extend(probs[: , 1].cpu().numpy())  # Probability of class 1 (earthquake)
+
+# Convert to numpy arrays
+all_preds = np.array(all_preds)
+all_labels = np.array(all_labels)
+all_probs = np.array(all_probs)
+
+# Calculate metrics
+avg_loss = running_loss / len(all_labels)
+accuracy = accuracy_score(all_labels, all_preds)
+precision = precision_score(all_labels, all_preds, pos_label=1)
+recall = recall_score(all_labels, all_preds, pos_label=1)
+# f1 = f1_score(all_labels, all_preds, pos_label=1)
+cm = confusion_matrix(all_labels, all_preds)
+
+print(f"{'='*60}")
+print(f"Accuracy:   {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall:    {recall:.4f}")
+# print(f"F1 Score:  {f1:.4f}")
+print("\nConfusion Matrix (rows: true, cols: predicted) [0=Background, 1=Earthquake]:")
+print(cm)
 
 print(f"Training complete. Model saved to {MODEL_PTH_PATH}")
