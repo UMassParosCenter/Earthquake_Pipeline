@@ -35,23 +35,27 @@ with open(EARTHQUAKE_DATA_PKL, "rb") as f:
 with open(BACKGROUND_DATA_PKL, "rb") as f:
     bg_dict: Dict = pickle.load(f)
 
-eq_array = list(eq_dict.values())
-bg_array = list(bg_dict.values())
+eq_spectrograms = [item[0] for item in eq_dict.values()]  # Spectrograms
+eq_power = np.array([item[1] for item in eq_dict.values()])  # Power features
 
-print(f'Loaded {len(eq_array)} EQ samples and {len(bg_array)} BG samples')
+bg_spectrograms = [item[0] for item in bg_dict.values()]
+bg_power = np.array([item[1] for item in bg_dict.values()])
 
-spectrograms = [np.asarray(s, dtype=np.float32) for s in eq_array]
+print(f'Loaded {len(eq_spectrograms)} EQ samples and {len(bg_spectrograms)} BG samples')
+print(f'Spectrogram shape: {eq_spectrograms[0].shape}')
+print(f'Power features shape: {eq_power.shape}')
 
-X = np.concatenate([eq_array, bg_array], axis=0)
+X_spec = np.array(eq_spectrograms + bg_spectrograms, dtype=np.float32)
+X_power = np.vstack([eq_power, bg_power])
 y = np.concatenate(
-    [np.ones(len(eq_array), dtype=int), np.zeros(len(bg_array), dtype=int)]
+    [np.ones(len(eq_spectrograms), dtype=int), np.zeros(len(bg_spectrograms), dtype=int)]
 )
 
 train_idx, val_idx = train_test_split(
-    np.arange(len(X)), test_size=0.2, shuffle=True, stratify=y
+    np.arange(len(X_spec)), test_size=0.2, shuffle=True, stratify=y, random_state=42
 )
 
-dataset = Spectrogram_Dataset(X, y)
+dataset = Spectrogram_Dataset(X_spec, X_power, y)
 train_set = Subset(dataset, train_idx)
 val_set = Subset(dataset, val_idx)
 
@@ -90,19 +94,21 @@ for epoch in range(1, constants.N_EPOCHS):
     correct = 0
     total = 0
 
-    for X, y in train_loader:
-        X, y = X.to(device), y.to(device)
+    for spec_batch, power_batch, label_batch in train_loader:
+      spec_batch = spec_batch.to(device)
+      power_batch = power_batch.to(device)
+      label_batch = label_batch.to(device)
 
-        optimizer.zero_grad()
-        logits = model(X)
-        loss = criterion(logits, y)
-        loss.backward()
-        optimizer.step()
+      optimizer.zero_grad()
+      logits = model(spec_batch, power_batch)
+      loss = criterion(logits, label_batch)
+      loss.backward()
+      optimizer.step()
 
-        bs = X.size(0)
-        running_loss += loss.item() * bs  # sum(loss * batch_size)
-        correct += (logits.argmax(dim=1) == y).sum().item()
-        total += bs
+      bs = spec_batch.size(0)
+      running_loss += loss.item() * bs  # sum(loss * batch_size)
+      correct += (logits.argmax(dim=1) == label_batch).sum().item()
+      total += bs
 
     train_loss = running_loss / total
     train_acc = correct / total
@@ -113,17 +119,18 @@ for epoch in range(1, constants.N_EPOCHS):
     total = 0
 
     with torch.no_grad():
-        for X, y in val_loader:
-            X = X.to(device)
-            y = y.to(device)
+      for spec_batch, power_batch, label_batch in val_loader:
+        spec_batch = spec_batch.to(device)
+        power_batch = power_batch.to(device)
+        label_batch = label_batch.to(device)
 
-            logits = model(X)
-            loss = criterion(logits, y)
+        logits = model(spec_batch, power_batch)
+        loss = criterion(logits, label_batch)
 
-            bs = X.size(0)
-            running_loss += loss.item() * bs
-            correct += (logits.argmax(dim=1) == y).sum().item()
-            total += bs
+        bs = spec_batch.size(0)
+        running_loss += loss.item() * bs
+        correct += (logits.argmax(dim=1) == label_batch).sum().item()
+        total += bs
 
     val_loss = running_loss / total
     val_acc = correct / total
@@ -150,21 +157,17 @@ all_probs = []
 test_loader = DataLoader(dataset, batch_size=2056, shuffle=False)
 
 with torch.no_grad():
-    for X_batch, y_batch in test_loader:
-        X_batch = X_batch.to(device)
-        y_batch = y_batch.to(device)
+  for spec_batch, power_batch, label_batch in test_loader:
+      spec_batch = spec_batch.to(device)
+      power_batch = power_batch.to(device)
 
-        logits = model(X_batch)
-        loss = criterion(logits, y_batch)
+      logits = model(spec_batch, power_batch)
+      probs = torch.softmax(logits, dim=1)
+      preds = logits.argmax(dim=1)
 
-        # Get predictions and probabilities
-        probs = torch.softmax(logits, dim=1)
-        preds = logits.argmax(dim=1)
-
-        running_loss += loss.item() * X_batch.size(0)
-        all_preds. extend(preds.cpu().numpy())
-        all_labels.extend(y_batch.cpu().numpy())
-        all_probs. extend(probs[: , 1].cpu().numpy())  # Probability of class 1 (earthquake)
+      all_preds.extend(preds.cpu().numpy())
+      all_labels.extend(label_batch.cpu().numpy())
+      all_probs.extend(probs[:, 1].cpu().numpy())
 
 # Convert to numpy arrays
 all_preds = np.array(all_preds)

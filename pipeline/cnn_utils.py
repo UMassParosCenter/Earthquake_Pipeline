@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.nn.modules.container import Sequential
@@ -5,18 +6,27 @@ from torch.utils.data import Dataset
 
 
 class Spectrogram_Dataset(Dataset):
-    def __init__(self, X, y):
-        self.X = torch.tensor(X, dtype=torch.float32)
-        self.y = torch.tensor(y, dtype=torch.long)
+    def __init__(self, spectrograms, power_features, labels):
+      self.spectrograms = torch.tensor(spectrograms, dtype=torch.float32)
+      self.labels = torch.tensor(labels, dtype=torch.long)
+
+      power_array = np.array(power_features, dtype=np.float32)
+      power_log = np.log10(power_array + 1e-12)
+
+      self.power_mean = np.mean(power_log, axis=0, keepdims=True)
+      self.power_std = np.std(power_log, axis=0, keepdims=True) + 1e-8
+
+      power_normalized = (power_log - self.power_mean) / self.power_std
+      self.power_features = torch.tensor(power_normalized, dtype=torch.float32)
 
     def __len__(self):
-        return len(self.X)
+        return len(self.labels)
 
     def __getitem__(self, idx):
-        spec = self.X[idx]
-        spec = spec.unsqueeze(0)
-        label = self.y[idx]
-        return spec, label
+      spec = self.spectrograms[idx].unsqueeze(0)
+      power = self.power_features[idx]
+      label = self.labels[idx]
+      return spec, power, label
 
 class EarlyStopping:
     def __init__(self, patience=5, min_delta=0.0):
@@ -89,9 +99,21 @@ class SpectrogramCNN(nn.Module):
     self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
     self.global_max_pool = nn.AdaptiveMaxPool2d((1, 1))
 
+    # MLP for absolute power features
+    self.power_branch = nn.Sequential(
+        nn.Linear(9, 32),
+        nn.BatchNorm1d(32),
+        nn.ReLU(inplace=True),
+        nn.Dropout(p=0.3),
+        nn.Linear(32, 32),
+        nn.BatchNorm1d(32),
+        nn.ReLU(inplace=True),
+        nn.Dropout(p=0.3),
+    )
+
     # Classifier (input size is always 256*2 regardless of input image size)
     self.classifier = nn.Sequential(
-        nn. Linear(256 * 2, 512),  # *2 for avg + max pooling
+        nn. Linear(256 * 2 + 32, 512),  # *2 for avg + max pooling
         nn.ReLU(inplace=True),
         nn.Dropout(p=0.5),
         nn.Linear(512, 128),
@@ -100,14 +122,18 @@ class SpectrogramCNN(nn.Module):
         nn.Linear(128, 2)
     )
 
-  def forward(self, x):
-      # Feature extraction
-      x = self.features(x)
+  def forward(self, spectrogram, power_features):
+    # Process log-scale spectrogram for patterns
+    spec_feat = self.features(spectrogram)
+    avg_pool = self.global_avg_pool(spec_feat).view(spec_feat.size(0), -1)
+    max_pool = self.global_max_pool(spec_feat).view(spec_feat.size(0), -1)
+    spec_combined = torch.cat([avg_pool, max_pool], dim=1)
 
-      # Global pooling (works with any spatial size)
-      avg_pool = self.global_avg_pool(x).view(x.size(0), -1)
-      max_pool = self.global_max_pool(x).view(x.size(0), -1)
-      x = torch.cat([avg_pool, max_pool], dim=1)
+    # Process absolute power features
+    power_feat = self.power_branch(power_features)
 
-      # Classification
-      return self.classifier(x)
+    # Combine both information sources
+    combined = torch.cat([spec_combined, power_feat], dim=1)
+
+    # Final classification
+    return self.classifier(combined)

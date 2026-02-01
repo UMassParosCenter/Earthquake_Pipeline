@@ -12,7 +12,7 @@ from scripts.constants import SAMPLE_RATE_HZ
 
 def create_spectrogram(
     w: NDArray, fs: int, nperseg: int, overlap: float
-) -> Optional[np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     try:
         waveform = signal.detrend(w)
         n_samples: int = len(waveform)
@@ -39,15 +39,21 @@ def create_spectrogram(
         freq_mask = (f >= 1.0) & (f <= 10.0)
         Sxx_cropped = Sxx[freq_mask, :]
 
+        power_features = np.array([
+            np.sum(Sxx_cropped),            # 0: Total power (energy)
+            np.max(Sxx_cropped),            # 1: Peak power
+            np.mean(Sxx_cropped),           # 2: Average power
+            np.std(Sxx_cropped),            # 3: Power variability
+            np.percentile(Sxx_cropped, 90), # 4: 90th percentile
+            np.median(Sxx_cropped),         # 5: Median power
+            # Band-specific powers
+            np.sum(Sxx[(f >= 1.0) & (f < 3.0), :]),   # 6: 1-3 Hz band
+            np.sum(Sxx[(f >= 3.0) & (f < 5.0), :]),   # 7: 3-5 Hz band
+            np.sum(Sxx[(f >= 5.0) & (f <= 10.0), :]), # 8: 5-10 Hz band
+        ], dtype=np.float32)
+
         Sxx_log = np.log10(Sxx_cropped + 1e-12)
-
-        # from matplotlib import pyplot as plt
-        # fig, axes = plt.subplots(2)
-        # axes[0].plot(waveform, linewidth=1.5)
-        # plt.pcolormesh(t, f_cropped, Sxx_log, shading='gouraud', cmap='jet')
-
-        # plt.show()
-        return Sxx_log
+        return Sxx_log, power_features
 
     except Exception as e:
         tqdm.write("Error processing")
@@ -86,8 +92,7 @@ def process_data(
         lens.append(len(waveform))
 
     # import pdb; pdb.set_trace()
-    spectrograms = [_create_spectrogram(w) for w in waveforms]
-    labeled_event_dicts = {}
-    for i, e in enumerate(spectrograms):
-        labeled_event_dicts[f"event_{i:03d}"] = e
-    return labeled_event_dicts
+    results = [_create_spectrogram(w) for w in waveforms]
+    spectrograms = [r[0] for r in results]
+    power_features = [r[1] for r in results]
+    return spectrograms, np.array(power_features)

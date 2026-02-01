@@ -36,7 +36,7 @@ background_windows = event_catalog_utils.generate_background_data(
 )
 
 print("Processing earthquake data")
-eq = spectrogram_utils.process_data(
+eq_specs, eq_powers = spectrogram_utils.process_data(
     earthquake_windows,
     box.sample_rate_hz,
     SAMPLE_RATE_HZ,
@@ -46,7 +46,7 @@ eq = spectrogram_utils.process_data(
 )
 
 print("Processing background data")
-bg = spectrogram_utils.process_data(
+bg_specs, bg_powers = spectrogram_utils.process_data(
     background_windows,
     box.sample_rate_hz,
     SAMPLE_RATE_HZ,
@@ -55,10 +55,18 @@ bg = spectrogram_utils.process_data(
     EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
 )
 
-print(f"Saved {len(eq)} earthquake and {len(bg)} background events")
+# Combine spectrograms and power features into tuples
+eq_dict = {f"earthquake_{i:04d}": (spec, power)
+           for i, (spec, power) in enumerate(zip(eq_specs, eq_powers))}
+bg_dict = {f"background_{i:04d}": (spec, power)
+           for i, (spec, power) in enumerate(zip(bg_specs, bg_powers))}
 
-# Save to pickle file
+print(f"Saved {len(eq_dict)} earthquake and {len(bg_dict)} background events")
+
+# Save to pickle files
 with open(BACKGROUND_DATA_PKL, "wb") as f:
-    pickle.dump(bg, f)
+    pickle.dump(bg_dict, f)
 with open(EARTHQUAKE_DATA_PKL, "wb") as f:
-    pickle.dump(eq, f)
+    pickle.dump(eq_dict, f)
+
+print("Data saved successfully!")

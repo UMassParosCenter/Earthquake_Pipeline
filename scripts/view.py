@@ -65,7 +65,7 @@ new_dt = np.linspace(
     num=len(waveform)
 ).astype('datetime64[ns]')
 
-Sxx_log = create_spectrogram(waveform, SAMPLE_RATE_HZ, NPERSEG, OVERLAP)
+Sxx_log, powers = create_spectrogram(waveform, SAMPLE_RATE_HZ, NPERSEG, OVERLAP)
 plt.imshow(Sxx_log, interpolation='none')
 
 fig_dpi = 100

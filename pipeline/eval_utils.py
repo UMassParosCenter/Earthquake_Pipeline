@@ -59,7 +59,8 @@ def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
 
     samples = waveform["value"].values
     w = safe_resample(samples, box_config.sample_rate_hz, fs_out)
-    return (seg_start, seg_end, create_spectrogram(w, fs_out, NPERSEG, OVERLAP))
+    specs, powers = create_spectrogram(w, fs_out, NPERSEG, OVERLAP)
+    return (seg_start, seg_end, specs, powers)
 
 
 def infer_timerange(
@@ -95,26 +96,39 @@ def infer_timerange(
     results = []
     window_start: datetime
     window_end: datetime
-    spec: NDArray
-    for window_start, window_end, spec in windows:
-        input_tensor = (
-            torch.tensor(spec, dtype=torch.float32).unsqueeze(0).unsqueeze(0).to(device)
-        )
-        with torch.no_grad():
-            output = model(input_tensor)
-            if device.type == "cuda":
-                output = output.cpu()
-            probs = torch.softmax(output, dim=1).numpy()[0]
-            pred = np.argmax(probs).__int__()
 
-        results.append(
-            Inference(
-                datetime.now(UTC).isoformat(timespec="seconds"),
-                window_start.isoformat(timespec="seconds"),
-                window_end.isoformat(timespec="seconds"),
-                pred,
-                round(float(probs[0]), 5),
-                round(float(probs[1]), 5),
-            )
+    power_features_list = [w[3] for w in windows]
+    power_array = np.array(power_features_list, dtype=np.float32)
+
+    power_log = np.log10(power_array + 1e-12)
+    power_mean = np.mean(power_log, axis=0, keepdims=True)
+    power_std = np.std(power_log, axis=0, keepdims=True) + 1e-8
+    power_normalized = (power_log - power_mean) / power_std
+
+    for i, (window_start, window_end, spec, power_raw) in enumerate(windows):
+        if spec is None:
+            continue
+
+        # Prepare inputs
+        spec_tensor = torch.from_numpy(spec).float().unsqueeze(0).unsqueeze(0).to(device)
+        power_tensor = torch.from_numpy(power_normalized[i]).float().unsqueeze(0).to(device)
+
+        # Run inference
+        with torch.no_grad():
+            logits = model(spec_tensor, power_tensor)
+            probs = torch.softmax(logits, dim=1)
+            pred = logits.argmax(dim=1).item()
+            prob_bg = probs[0, 0].item()
+            prob_eq = probs[0, 1].item()
+
+        # Store result with power info
+        result = Inference(
+            now=datetime.now(UTC).isoformat(),
+            window_start=window_start.isoformat(),
+            window_end=window_end.isoformat(),
+            pred=pred,
+            prob_bg=prob_bg,
+            prob_eq=prob_eq,
         )
+        results.append(result)
     return results
