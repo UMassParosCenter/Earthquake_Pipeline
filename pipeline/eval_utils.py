@@ -18,23 +18,23 @@ from scripts.constants import NPERSEG, OVERLAP
 @dataclass
 class Inference:
     now: str
-    window_start: str
-    window_end: str
+    window_start: datetime
+    window_end: datetime
     pred: int
     prob_bg: float
     prob_eq: float
 
     def __str__(self) -> str:
         return (
-            f"{self.now},{self.window_start},{self.window_end},"
+            f"{self.now},{self.window_start.isoformat()},{self.window_end.isoformat()},"
             + f"{self.pred},{self.prob_bg},{self.prob_eq}"
         )
 
     def to_row(self) -> list:
         return [
-            self.now,
-            self.window_start,
-            self.window_end,
+            # self.now,
+            self.window_start.isoformat(),
+            self.window_end.isoformat(),
             self.pred,
             self.prob_bg,
             self.prob_eq,
@@ -42,6 +42,7 @@ class Inference:
 
 
 def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
+  try:
     seg_start = time
     seg_end = seg_start + timedelta(seconds=event_duration)
     data = query_influx_data(
@@ -61,6 +62,8 @@ def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
     w = safe_resample(samples, box_config.sample_rate_hz, fs_out)
     specs, powers = create_spectrogram(w, fs_out, NPERSEG, OVERLAP)
     return (seg_start, seg_end, specs, powers)
+  except KeyError:
+    return None
 
 
 def infer_timerange(
@@ -70,6 +73,7 @@ def infer_timerange(
     fs_out: int,
     event_duration: int,
     box_config: BoxConfig,
+    offset: timedelta = timedelta(seconds=0)
 ) -> list[Inference]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SpectrogramCNN()
@@ -79,7 +83,7 @@ def infer_timerange(
 
     times: list = []
 
-    current_time = start_time
+    current_time = start_time + offset
     while current_time + timedelta(seconds=event_duration) <= end_time:
         times.append(current_time)
         current_time += timedelta(seconds=event_duration)
@@ -124,8 +128,8 @@ def infer_timerange(
         # Store result with power info
         result = Inference(
             now=datetime.now(UTC).isoformat(),
-            window_start=window_start.isoformat(),
-            window_end=window_end.isoformat(),
+            window_start=window_start,
+            window_end=window_end,
             pred=pred,
             prob_bg=prob_bg,
             prob_eq=prob_eq,
