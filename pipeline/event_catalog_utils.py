@@ -51,9 +51,10 @@ def read_background_window(
         if not data:
             tqdm.write(f"No data returned for {timestamp}")
             return
-        data_arrays = {key: df_.values for key, df_ in data.items()}
+        key = list(data.keys())[0]
+        waveform = np.dstack([data[key]['time'], data[key]['value']])[0]
         return {
-            "waveform": data_arrays,
+            "waveform": {key: waveform},
             "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
         }
     except Exception:
@@ -142,7 +143,7 @@ def read_earthquake_window(
 
         # Arrival prediction
         delay = _surface_wave_delay(event_lat, event_lon, station_lat, station_lon)
-        arrival_time = event_time + timedelta(seconds=0)
+        arrival_time = event_time + timedelta(seconds=delay)
 
         start_time = (arrival_time - time_before).strftime("%Y-%m-%dT%H:%M:%S")
         end_time = (arrival_time + time_after).strftime("%Y-%m-%dT%H:%M:%S")
@@ -158,7 +159,6 @@ def read_earthquake_window(
         if not data:
             return None  # No data for this event
 
-        data_arrays = {key: df_.values for key, df_ in data.items()}
         metadata = {
             "time": event_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "latitude": event_lat,
@@ -169,10 +169,11 @@ def read_earthquake_window(
             "arrival_time": arrival_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
         }
 
-        return {"waveform": data_arrays, "metadata": metadata, "delay": delay}
+        key = list(data.keys())[0]
+        waveform = np.dstack([data[key]['time'], data[key]['value']])[0]
+        return {"waveform": {key: waveform},"metadata": metadata, "delay": delay}
 
     except Exception:
-        # tqdm.write(f"[Error] Event {idx + 1} failed: {e}")
         return None
 
 
@@ -217,5 +218,4 @@ def generate_earthquake_data(
     for i, e in enumerate(events):
         data[f"event{i:04d}"] = e
         arrival_time.append(e['delay'])
-    # print(arrival_time)
     return data
