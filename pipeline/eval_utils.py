@@ -91,7 +91,7 @@ def infer_timerange(
         fs_out=fs_out,
         box_config=box_config,
     )
-    windows = process_map(spectrogram_func, times)
+    windows = process_map(spectrogram_func, times, chunksize=len(times) // 100)
 
     results = []
     window_start: datetime
