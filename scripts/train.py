@@ -12,7 +12,6 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_class_weight
-from torch import nn
 from torch.nn.modules.loss import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
@@ -135,18 +134,20 @@ for epoch in range(1, constants.N_EPOCHS):
     val_loss = running_loss / total
     val_acc = correct / total
 
+    early_stopping(val_loss)
+    best = False
+    if best_score is None or val_loss < best_score:
+      torch.save(model.state_dict(), MODEL_PTH_PATH)
+      best_score = val_loss
+      best = True
+
+
     print(
         f"Epoch {epoch:02d} | "
         f"Train Loss: {train_loss:.4f} Acc: {train_acc:.3f} | "
-        f"Val Loss: {val_loss:.4f} Acc: {val_acc:.3f}"
+        f"Val Loss: {val_loss:.4f} Acc: {val_acc:.3f}" +
+        (" | Best score, saved" if best else "")
     )
-
-    early_stopping(val_loss)
-    if best_score is None or val_loss < best_score:
-      torch.save(model.state_dict(), MODEL_PTH_PATH)
-    if early_stopping.early_stop:
-        print("Early stopping triggered.")
-        break
 
 model.eval()
 running_loss = 0.0
