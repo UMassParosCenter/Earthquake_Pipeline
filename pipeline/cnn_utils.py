@@ -81,7 +81,7 @@ class SpectrogramCNN(nn.Module):
         nn.Conv2d(128, 128, kernel_size=3, padding='same'),
         nn.BatchNorm2d(128),
         nn.ReLU(inplace=True),
-        nn.MaxPool2d((2, 2)),
+        nn.MaxPool2d((2, 1)),
         nn.Dropout2d(p=dropout_rate),
 
         # Block 4
@@ -91,7 +91,7 @@ class SpectrogramCNN(nn.Module):
         nn.Conv2d(256, 256, kernel_size=3, padding='same'),
         nn.BatchNorm2d(256),
         nn.ReLU(inplace=True),
-        nn.MaxPool2d((2, 2)),
+        nn.MaxPool2d((2, 1)),
         nn.Dropout2d(p=dropout_rate),
     )
 
@@ -105,15 +105,15 @@ class SpectrogramCNN(nn.Module):
         nn.BatchNorm1d(32),
         nn.ReLU(inplace=True),
         nn.Dropout(p=0.3),
-        nn.Linear(32, 32),
-        nn.BatchNorm1d(32),
+        nn.Linear(32, 64),
+        nn.BatchNorm1d(64),
         nn.ReLU(inplace=True),
         nn.Dropout(p=0.3),
     )
 
     # Classifier (input size is always 256*2 regardless of input image size)
     self.classifier = nn.Sequential(
-        nn. Linear(256 * 2 + 32, 512),  # *2 for avg + max pooling
+        nn.Linear(256 * 2 + 64, 512),  # *2 for avg + max pooling
         nn.ReLU(inplace=True),
         nn.Dropout(p=0.5),
         nn.Linear(512, 128),
