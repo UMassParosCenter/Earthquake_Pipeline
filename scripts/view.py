@@ -19,14 +19,6 @@ from scripts.constants import (
     SAMPLE_RATE_HZ,
 )
 
-"""
-To look at:
-  [] Data augmentation (reusing samples with random noise added?)
-  [] Artifacts at beginning and end of each time series
-  [] Increasing the resolution of the spectrograms somehow?
-  [] Log the real samples used when making dataset to use with viewer
-"""
-
 assert len(sys.argv) == 2, "Wrong number of args, provide one datetime to view"
 
 box = event_catalog_utils.load_box_config(BOX_CONFIG_PATH)
@@ -66,12 +58,16 @@ new_dt = np.linspace(
 ).astype('datetime64[ns]')
 
 Sxx_log, powers = create_spectrogram(waveform, SAMPLE_RATE_HZ, NPERSEG, OVERLAP)
-plt.imshow(Sxx_log, interpolation='none')
+fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(9, 12))
 
-fig_dpi = 100
-fig, axes = plt.subplots(1, figsize=(1254/ fig_dpi, 1486 / fig_dpi), dpi = fig_dpi)
-axes.plot(new_dt, waveform, linewidth=1.5)
-axes.set_title("Time Series Data")
-axes.set_ylabel('Pressure (mB)')
-axes.set_xlabel('Time (UTC)')
+ax1.plot(new_dt, waveform, linewidth=1.5)
+ax1.set_title("Plot")
+ax1.set_title("Time Series Data")
+ax1.set_ylabel('Pressure (mB)')
+ax1.set_xlabel('Time (UTC)')
+
+ax2.imshow(Sxx_log, interpolation='none', cmap='plasma')
+ax2.set_title("Model Inputs")
+
+# plt.tight_layout()
 plt.show()

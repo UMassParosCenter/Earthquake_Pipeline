@@ -52,71 +52,50 @@ class SpectrogramCNN(nn.Module):
   def __init__(self, dropout_rate=0.3):
     super().__init__()
 
-    # Feature extraction (works with any input size)
     self.features = nn.Sequential(
         # Block 1
-        nn.Conv2d(1, 32, kernel_size=3, padding='same'),
-        nn.BatchNorm2d(32),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(32, 32, kernel_size=3, padding='same'),
-        nn.BatchNorm2d(32),
+        nn.Conv2d(1, 18, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(18),
         nn.ReLU(inplace=True),
         nn.MaxPool2d((2, 2)),
         nn.Dropout2d(p=dropout_rate),
 
         # Block 2
-        nn. Conv2d(32, 64, kernel_size=3, padding='same'),
-        nn.BatchNorm2d(64),
-        nn.ReLU(inplace=True),
-        nn.Conv2d(64, 64, kernel_size=3, padding='same'),
-        nn.BatchNorm2d(64),
+        nn. Conv2d(18, 36, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(36),
         nn.ReLU(inplace=True),
         nn.MaxPool2d((2, 2)),
         nn.Dropout2d(p=dropout_rate),
 
         # Block 3
-        nn.Conv2d(64, 128, kernel_size=3, padding='same'),
-        nn.BatchNorm2d(128),
+        nn. Conv2d(36, 54, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(54),
         nn.ReLU(inplace=True),
-        nn.Conv2d(128, 128, kernel_size=3, padding='same'),
-        nn.BatchNorm2d(128),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d((2, 1)),
+        nn.MaxPool2d((2, 2)),
         nn.Dropout2d(p=dropout_rate),
 
         # Block 4
-        nn.Conv2d(128, 256, kernel_size=3, padding='same'),
-        nn.BatchNorm2d(256),
+        nn. Conv2d(54, 54, kernel_size=3, padding='same'),
+        nn.BatchNorm2d(54),
         nn.ReLU(inplace=True),
-        nn.Conv2d(256, 256, kernel_size=3, padding='same'),
-        nn.BatchNorm2d(256),
-        nn.ReLU(inplace=True),
-        nn.MaxPool2d((2, 1)),
-        nn.Dropout2d(p=dropout_rate),
+        nn.MaxPool2d((2, 2)),
+        nn.Dropout2d(p=dropout_rate)
     )
-
-    # Global pooling (handles any spatial size)
-    self.global_avg_pool = nn.AdaptiveAvgPool2d((1, 1))
-    self.global_max_pool = nn.AdaptiveMaxPool2d((1, 1))
 
     # MLP for absolute power features
     self.power_branch = nn.Sequential(
-        nn.Linear(9, 32),
-        nn.BatchNorm1d(32),
+        nn.Linear(9, 16),
+        nn.BatchNorm1d(16),
         nn.ReLU(inplace=True),
         nn.Dropout(p=0.3),
-        nn.Linear(32, 64),
-        nn.BatchNorm1d(64),
+        nn.Linear(16, 32),
+        nn.BatchNorm1d(32),
         nn.ReLU(inplace=True),
         nn.Dropout(p=0.3),
     )
 
-    # Classifier (input size is always 256*2 regardless of input image size)
     self.classifier = nn.Sequential(
-        nn.Linear(256 * 2 + 64, 512),  # *2 for avg + max pooling
-        nn.ReLU(inplace=True),
-        nn.Dropout(p=0.5),
-        nn.Linear(512, 128),
+        nn.Linear(54*2 + 32, 128),  # *2 for avg + max pooling
         nn.ReLU(inplace=True),
         nn.Dropout(p=0.5),
         nn.Linear(128, 2)
@@ -124,16 +103,12 @@ class SpectrogramCNN(nn.Module):
 
   def forward(self, spectrogram, power_features):
     # Process log-scale spectrogram for patterns
-    spec_feat = self.features(spectrogram)
-    avg_pool = self.global_avg_pool(spec_feat).view(spec_feat.size(0), -1)
-    max_pool = self.global_max_pool(spec_feat).view(spec_feat.size(0), -1)
-    spec_combined = torch.cat([avg_pool, max_pool], dim=1)
-
+    spec_feat = self.features(spectrogram).flatten(1)
     # Process absolute power features
     power_feat = self.power_branch(power_features)
 
     # Combine both information sources
-    combined = torch.cat([spec_combined, power_feat], dim=1)
+    combined = torch.cat([spec_feat, power_feat], dim=1)
 
     # Final classification
     return self.classifier(combined)
