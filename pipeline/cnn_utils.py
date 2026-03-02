@@ -95,7 +95,10 @@ class SpectrogramCNN(nn.Module):
     )
 
     self.classifier = nn.Sequential(
-        nn.Linear(54*2 + 32, 128),  # *2 for avg + max pooling
+        nn.Linear(572, 256),
+        nn.ReLU(inplace=True),
+        nn.Dropout(p=0.5),
+        nn.Linear(256, 128),
         nn.ReLU(inplace=True),
         nn.Dropout(p=0.5),
         nn.Linear(128, 2)
