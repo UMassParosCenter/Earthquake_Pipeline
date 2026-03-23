@@ -42,7 +42,7 @@ bg_power = np.array([item[1] for item in bg_dict.values()])
 
 print(f'Loaded {len(eq_spectrograms)} EQ samples and {len(bg_spectrograms)} BG samples')
 print(f'Spectrogram shape: {eq_spectrograms[0].shape}')
-print(f'Power features shape: {eq_power.shape}')
+print(f'Power features shape: {eq_power[0].shape}')
 
 X_spec = np.array(eq_spectrograms + bg_spectrograms, dtype=np.float32)
 X_power = np.vstack([eq_power, bg_power])
