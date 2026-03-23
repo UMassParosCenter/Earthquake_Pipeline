@@ -20,8 +20,6 @@ if __name__ == "__main__":
   freeze_support()
   box = event_catalog_utils.load_box_config(BOX_CONFIG_PATH)
 
-  reference_npz: np.lib.npyio.NpzFile = np.load(REFERENCE_NPZ_PATH)
-  reference_npz.close()
   # Try staggering windows
   # Play with window size
   # Ask about how to mitigate the fact that the event could happen at many points within window
