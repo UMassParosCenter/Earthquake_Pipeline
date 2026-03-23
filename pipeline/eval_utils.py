@@ -115,7 +115,7 @@ def infer_timerange(
 
         # Prepare inputs
         spec_tensor = torch.from_numpy(spec).float().unsqueeze(0).unsqueeze(0).to(device)
-        power_tensor = torch.from_numpy(power_normalized[i]).float().unsqueeze(0).to(device)
+        power_tensor = torch.from_numpy(power_raw).float().unsqueeze(0).to(device)
 
         # Run inference
         with torch.no_grad():
