@@ -42,25 +42,25 @@ if __name__ == "__main__":
       EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
       box,
   )
-  # results_offset: list[eval_utils.Inference] = eval_utils.infer_timerange(
-  #     start_time,
-  #     end_time,
-  #     MODEL_PTH_PATH,
-  #     SAMPLE_RATE_HZ,
-  #     EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
-  #     box,
-  #     offset=timedelta(seconds=(EVENT_BEFORE_SEC+EVENT_AFTER_SEC)/2)
-  # )
-  # results += results_offset
+  results_offset: list[eval_utils.Inference] = eval_utils.infer_timerange(
+      start_time,
+      end_time,
+      MODEL_PTH_PATH,
+      SAMPLE_RATE_HZ,
+      EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
+      box,
+      offset=timedelta(seconds=(EVENT_BEFORE_SEC+EVENT_AFTER_SEC)/2)
+  )
+  results += results_offset
   results.sort(key=lambda i: i.window_start)
   results = results[::-1]
   results_filtered = [results[1]]
-  for i in range(1, len(results)):
-    time_a = results[i - 1].window_start
-    time_b = results[i].window_start
-    if time_a - time_b == timedelta(seconds=(EVENT_BEFORE_SEC+EVENT_AFTER_SEC)/2) and results[i-1].pred == results[i].pred:
-      continue
+  for i in range(0, len(results)-1):
+    time_a = results[i].window_start
+    time_b = results[i+1].window_start
     results_filtered.append(results[i])
+    if time_a - time_b == timedelta(seconds=(EVENT_BEFORE_SEC+EVENT_AFTER_SEC)/2) and results[i-1].pred == results[i].pred:
+      i+=1
 
   Path(INFERENCE_EXPORT_PATH).mkdir(parents=True, exist_ok=True)
   log_path = (
