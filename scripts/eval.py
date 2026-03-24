@@ -1,4 +1,5 @@
 import csv
+import pickle
 from datetime import datetime, timedelta
 from multiprocessing import freeze_support
 from pathlib import Path
@@ -48,18 +49,16 @@ if __name__ == "__main__":
     )
     results += results_offset
     results.sort(key=lambda i: i.window_start)
-    results = results[::-1]
-    results_filtered = [results[1]]
-    for i in range(0, len(results) - 1):
-        time_a = results[i].window_start
-        time_b = results[i + 1].window_start
-        results_filtered.append(results[i])
-        if (
-            time_b - time_a
-            == timedelta(seconds=(EVENT_BEFORE_SEC + EVENT_AFTER_SEC) / 2)
-            and results[i - 1].pred == results[i].pred
-        ):
+
+    detections = [r for r in results if r.pred == 1]
+    detections_filtered = []
+    i = 0
+    while i < len(detections) - 1:
+        win_end = detections[i].window_end
+        detections_filtered.append(detections[i])
+        while i < len(detections) - 1 and (detections[i + 1].window_start < win_end):
             i += 1
+        i += 1
 
     Path(INFERENCE_EXPORT_PATH).mkdir(parents=True, exist_ok=True)
     log_path = (
@@ -93,10 +92,12 @@ if __name__ == "__main__":
         writer_all.writerow(header)
         writer_event.writerow(header)
         writer_strong_event.writerow(header)
-        for result in results_filtered:
+        for result in results:
             row = result.to_row()
             writer_all.writerow(row)
-            if result.pred == 1:
-                writer_event.writerow(row)
-                if result.prob_eq >= 0.90:
-                    writer_strong_event.writerow(row)
+
+        for result in detections_filtered:
+            row = result.to_row()
+            writer_event.writerow(row)
+            if result.prob_eq >= 0.90:
+                writer_strong_event.writerow(row)
