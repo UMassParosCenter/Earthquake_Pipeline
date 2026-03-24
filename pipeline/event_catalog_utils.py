@@ -1,4 +1,5 @@
 import json
+import math
 import pathlib
 from dataclasses import dataclass
 from datetime import timedelta
@@ -129,6 +130,50 @@ def _surface_wave_delay(
     return dist_km / vsurface
 
 
+def random_shift_windows(
+    idx: int,
+    df: pd.DataFrame,
+    station_lat: float,
+    station_lon: float,
+    time_before: float,
+    time_after: float,
+    box: BoxConfig,
+):
+    random = np.random.default_rng()
+    n_variations = random.integers(0, 6)
+    ret = [
+        read_earthquake_window(
+            idx,
+            df,
+            station_lat,
+            station_lon,
+            timedelta(seconds=time_before),
+            timedelta(seconds=time_after),
+            box,
+        )
+    ]
+    if ret[0] is None:
+        return None
+    for i in range(0, n_variations):
+        shift = int(
+            random.integers(math.floor(0.4 * time_before), math.ceil(0.9 * time_after))
+        )
+        if i % 2 == 0:
+            shift *= -1
+        ret.append(
+            read_earthquake_window(
+                idx,
+                df,
+                station_lat,
+                station_lon,
+                timedelta(seconds=time_before + shift),
+                timedelta(seconds=time_after - shift),
+                box,
+            )
+        )
+    return ret
+
+
 def read_earthquake_window(
     idx: int,
     df: pd.DataFrame,
@@ -211,16 +256,18 @@ def generate_earthquake_data(
     station_lat, station_lon = 24.07396028832464, 121.1286975322632
 
     read_func = partial(
-        read_earthquake_window,
+        random_shift_windows,
         df=earthquake_data.df,
         station_lat=station_lat,
         station_lon=station_lon,
-        time_before=timedelta(seconds=seconds_before),
-        time_after=timedelta(seconds=seconds_after),
+        time_before=seconds_before,
+        time_after=seconds_after,
         box=box_config,
     )
-    events = process_map(read_func, range(0, len(earthquake_data.df)))
-    events[:] = [e for e in events if e is not None]
+    event_lists = process_map(read_func, range(0, len(earthquake_data.df)))
+    event_lists = [e for e in event_lists if e is not None]
+    events = [e for sublist in event_lists for e in sublist]
+
     data = {}
     arrival_time = []
     for i, e in enumerate(events):
