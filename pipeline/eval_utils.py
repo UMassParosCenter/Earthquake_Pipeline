@@ -4,7 +4,6 @@ from datetime import UTC, datetime, timedelta
 
 import numpy as np
 import torch
-from numpy.typing import NDArray
 from paros_data_grabber import query_influx_data
 from tqdm.contrib.concurrent import process_map
 
@@ -42,28 +41,28 @@ class Inference:
 
 
 def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
-  try:
-    seg_start = time
-    seg_end = seg_start + timedelta(seconds=event_duration)
-    data = query_influx_data(
-        start_time=seg_start.isoformat(timespec="seconds"),
-        end_time=seg_end.isoformat(timespec="seconds"),
-        box_id=box_config.box_id,
-        sensor_id=box_config.sensor_id,
-        password=box_config.password,
-    )
-    key = f"{box_config.box_id}_{box_config.sensor_id}"
-    waveform = data.get(key)
-    if waveform is None or waveform.empty:
-        print(f"No data for window {seg_start} to {seg_end}")
-        return
+    try:
+        seg_start = time
+        seg_end = seg_start + timedelta(seconds=event_duration)
+        data = query_influx_data(
+            start_time=seg_start.isoformat(timespec="seconds"),
+            end_time=seg_end.isoformat(timespec="seconds"),
+            box_id=box_config.box_id,
+            sensor_id=box_config.sensor_id,
+            password=box_config.password,
+        )
+        key = f"{box_config.box_id}_{box_config.sensor_id}"
+        waveform = data.get(key)
+        if waveform is None or waveform.empty:
+            print(f"No data for window {seg_start} to {seg_end}")
+            return
 
-    samples = waveform["value"].values
-    w = safe_resample(samples, box_config.sample_rate_hz, fs_out)
-    specs, powers = create_spectrogram(w, fs_out, NPERSEG, OVERLAP)
-    return (seg_start, seg_end, specs, powers)
-  except KeyError:
-    return None
+        samples = waveform["value"].values
+        w = safe_resample(samples, box_config.sample_rate_hz, fs_out)
+        specs, powers = create_spectrogram(w, fs_out, NPERSEG, OVERLAP)
+        return (seg_start, seg_end, specs, powers)
+    except KeyError:
+        return None
 
 
 def infer_timerange(
@@ -73,7 +72,7 @@ def infer_timerange(
     fs_out: int,
     event_duration: int,
     box_config: BoxConfig,
-    offset: timedelta = timedelta(seconds=0)
+    offset: timedelta = timedelta(seconds=0),
 ) -> list[Inference]:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = SpectrogramCNN()
@@ -114,7 +113,9 @@ def infer_timerange(
             continue
 
         # Prepare inputs
-        spec_tensor = torch.from_numpy(spec).float().unsqueeze(0).unsqueeze(0).to(device)
+        spec_tensor = (
+            torch.from_numpy(spec).float().unsqueeze(0).unsqueeze(0).to(device)
+        )
         power_tensor = torch.from_numpy(power_raw).float().unsqueeze(0).to(device)
 
         # Run inference

@@ -52,7 +52,7 @@ def read_background_window(
             tqdm.write(f"No data returned for {timestamp}")
             return
         key = list(data.keys())[0]
-        waveform = np.dstack([data[key]['time'], data[key]['value']])[0]
+        waveform = np.dstack([data[key]["time"], data[key]["value"]])[0]
         return {
             "waveform": {key: waveform},
             "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -87,26 +87,28 @@ def generate_background_data(
 
     events = []
     while len(events) < num_samples:
-      real_samples = min(max(num_samples - len(events), 100), len(valid_hours))
-      print(f'{len(events)} stored. Attempting to pull {real_samples} more events.')
-      random = np.random.default_rng()
+        real_samples = min(max(num_samples - len(events), 100), len(valid_hours))
+        print(f"{len(events)} stored. Attempting to pull {real_samples} more events.")
+        random = np.random.default_rng()
 
-      selected_hours = pd.DatetimeIndex(random.choice(valid_hours, real_samples, False))
-      valid_hours = valid_hours.difference(selected_hours)
+        selected_hours = pd.DatetimeIndex(
+            random.choice(valid_hours, real_samples, False)
+        )
+        valid_hours = valid_hours.difference(selected_hours)
 
-      read_func = partial(
-          read_background_window,
-          time_before=timedelta(seconds=seconds_before),
-          time_after=timedelta(seconds=seconds_after),
-          box=box_config,
-      )
+        read_func = partial(
+            read_background_window,
+            time_before=timedelta(seconds=seconds_before),
+            time_after=timedelta(seconds=seconds_after),
+            box=box_config,
+        )
 
-      new_events = process_map(
-          read_func,
-          [timestamp for timestamp in selected_hours.sort_values()],
-      )
-      new_events[:] = [e for e in new_events if e is not None]
-      events += new_events
+        new_events = process_map(
+            read_func,
+            [timestamp for timestamp in selected_hours.sort_values()],
+        )
+        new_events[:] = [e for e in new_events if e is not None]
+        events += new_events
 
     data = {}
     for i, e in enumerate(events):
@@ -170,8 +172,8 @@ def read_earthquake_window(
         }
 
         key = list(data.keys())[0]
-        waveform = np.dstack([data[key]['time'], data[key]['value']])[0]
-        return {"waveform": {key: waveform},"metadata": metadata, "delay": delay}
+        waveform = np.dstack([data[key]["time"], data[key]["value"]])[0]
+        return {"waveform": {key: waveform}, "metadata": metadata, "delay": delay}
 
     except Exception:
         return None
@@ -217,5 +219,5 @@ def generate_earthquake_data(
     arrival_time = []
     for i, e in enumerate(events):
         data[f"event{i:04d}"] = e
-        arrival_time.append(e['delay'])
+        arrival_time.append(e["delay"])
     return data
