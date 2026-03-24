@@ -4,8 +4,10 @@ from multiprocessing import freeze_support
 from pipeline import event_catalog_utils, spectrogram_utils
 from scripts.constants import (
     BACKGROUND_BUFFER_HOURS,
+    BACKGROUND_DATA_LOG,
     BACKGROUND_DATA_PKL,
     BOX_CONFIG_PATH,
+    EARTHQUAKE_DATA_LOG,
     EARTHQUAKE_DATA_PKL,
     EARTHQUAKE_LOG_PATH,
     EVENT_AFTER_SEC,
@@ -39,7 +41,7 @@ if __name__ == "__main__":
     )
 
     print("Processing earthquake data")
-    eq_specs, eq_powers = spectrogram_utils.process_data(
+    eq_specs, eq_powers, eq_times = spectrogram_utils.process_data(
         earthquake_windows,
         box.sample_rate_hz,
         SAMPLE_RATE_HZ,
@@ -49,7 +51,7 @@ if __name__ == "__main__":
     )
 
     print("Processing background data")
-    bg_specs, bg_powers = spectrogram_utils.process_data(
+    bg_specs, bg_powers, bg_times = spectrogram_utils.process_data(
         background_windows,
         box.sample_rate_hz,
         SAMPLE_RATE_HZ,
@@ -70,10 +72,17 @@ if __name__ == "__main__":
 
     print(f"Saved {len(eq_dict)} earthquake and {len(bg_dict)} background events")
 
-    # Save to pickle files
+    # Save to files
     with open(BACKGROUND_DATA_PKL, "wb") as f:
         pickle.dump(bg_dict, f)
     with open(EARTHQUAKE_DATA_PKL, "wb") as f:
         pickle.dump(eq_dict, f)
+
+    with open(BACKGROUND_DATA_LOG, "w") as f:
+        for line in bg_times:
+            f.write(line + "\n")
+    with open(EARTHQUAKE_DATA_LOG, "w") as f:
+        for line in eq_times:
+            f.write(line + "\n")
 
     print("Data saved successfully!")

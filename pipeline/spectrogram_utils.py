@@ -79,6 +79,7 @@ def process_data(
     )
     waveforms = []
     lens = []
+    start_times = []
     for e in event_names:
         event_struct = data[e]
         waveform: NDArray[np.floating] = event_struct["waveform"]["parost2_141929"][
@@ -92,9 +93,10 @@ def process_data(
             continue
         waveforms.append(waveform)
         lens.append(len(waveform))
+        start_times.append(event_struct["timestamp"])
 
     # import pdb; pdb.set_trace()
     results = [_create_spectrogram(w) for w in waveforms]
     spectrograms = [r[0] for r in results]
     power_features = [r[1] for r in results]
-    return spectrograms, np.array(power_features)
+    return spectrograms, np.array(power_features), start_times

@@ -55,7 +55,7 @@ def read_background_window(
         waveform = np.dstack([data[key]["time"], data[key]["value"]])[0]
         return {
             "waveform": {key: waveform},
-            "timestamp": timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
+            "timestamp": start_t,
         }
     except Exception:
         return None
@@ -106,6 +106,7 @@ def generate_background_data(
         new_events = process_map(
             read_func,
             [timestamp for timestamp in selected_hours.sort_values()],
+            chunksize=len(selected_hours) // 100,
         )
         new_events[:] = [e for e in new_events if e is not None]
         events += new_events
@@ -173,7 +174,12 @@ def read_earthquake_window(
 
         key = list(data.keys())[0]
         waveform = np.dstack([data[key]["time"], data[key]["value"]])[0]
-        return {"waveform": {key: waveform}, "metadata": metadata, "delay": delay}
+        return {
+            "waveform": {key: waveform},
+            "timestamp": start_time,
+            "metadata": metadata,
+            "delay": delay,
+        }
 
     except Exception:
         return None
