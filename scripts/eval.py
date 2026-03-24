@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from multiprocessing import freeze_support
 from pathlib import Path
 
-
 from pipeline import eval_utils, event_catalog_utils
 from scripts.constants import (
     BOX_CONFIG_PATH,
@@ -56,7 +55,7 @@ if __name__ == "__main__":
         time_b = results[i + 1].window_start
         results_filtered.append(results[i])
         if (
-            time_a - time_b
+            time_b - time_a
             == timedelta(seconds=(EVENT_BEFORE_SEC + EVENT_AFTER_SEC) / 2)
             and results[i - 1].pred == results[i].pred
         ):
