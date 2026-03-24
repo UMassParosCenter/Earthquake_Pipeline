@@ -4,6 +4,7 @@ from multiprocessing import freeze_support
 import numpy as np
 
 from pipeline import event_catalog_utils, spectrogram_utils
+from pipeline.common import normalize_power_stats
 from scripts.constants import (
     BACKGROUND_BUFFER_HOURS,
     BACKGROUND_DATA_LOG,
@@ -33,16 +34,6 @@ if __name__ == "__main__":
         EARTHQUAKE_LOG_PATH, box, EVENT_BEFORE_SEC, EVENT_AFTER_SEC
     )
 
-    print("Generating background data")
-    background_windows = event_catalog_utils.generate_background_data(
-        EARTHQUAKE_LOG_PATH,
-        box,
-        BACKGROUND_BUFFER_HOURS,
-        N_BACKGROUND_SAMPLES,
-        EVENT_BEFORE_SEC,
-        EVENT_AFTER_SEC,
-    )
-
     print("Processing earthquake data")
     eq_specs, eq_power_stats, eq_times = spectrogram_utils.process_data(
         earthquake_windows,
@@ -51,6 +42,16 @@ if __name__ == "__main__":
         NPERSEG,
         OVERLAP,
         EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
+    )
+
+    print("Generating background data")
+    background_windows = event_catalog_utils.generate_background_data(
+        EARTHQUAKE_LOG_PATH,
+        box,
+        BACKGROUND_BUFFER_HOURS,
+        N_BACKGROUND_SAMPLES,
+        EVENT_BEFORE_SEC,
+        EVENT_AFTER_SEC,
     )
 
     print("Processing background data")
@@ -70,6 +71,19 @@ if __name__ == "__main__":
     power_std = np.std(power_log, axis=0, keepdims=True) + 1e-8
     with open(REFERENCE_PKL, "wb") as f:
         pickle.dump([power_mean, power_std], f)
+
+    eq_filter = [
+        x[-1] > 0 or x[-2] > 0
+        for x in normalize_power_stats(eq_power_stats, power_mean, power_std)
+    ]
+
+    print(
+        f"Filtered earthquake samples to {np.sum(eq_filter)} samples from {len(eq_power_stats)} samples"
+    )
+
+    eq_specs = [x for x, include in zip(eq_specs, eq_filter) if include]
+    eq_power_stats = eq_power_stats[eq_filter]
+    eq_times = eq_times[eq_filter]
 
     # Combine spectrograms and power features into tuples
     eq_dict = {
