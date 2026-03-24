@@ -1,4 +1,5 @@
 import functools
+import pickle
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
@@ -8,10 +9,10 @@ from paros_data_grabber import query_influx_data
 from tqdm.contrib.concurrent import process_map
 
 from pipeline.cnn_utils import SpectrogramCNN
-from pipeline.common import safe_resample
+from pipeline.common import normalize_power_stats, safe_resample
 from pipeline.event_catalog_utils import BoxConfig
 from pipeline.spectrogram_utils import create_spectrogram
-from scripts.constants import NPERSEG, OVERLAP
+from scripts.constants import NPERSEG, OVERLAP, REFERENCE_PKL
 
 
 @dataclass
@@ -59,8 +60,8 @@ def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
 
         samples = waveform["value"].values
         w = safe_resample(samples, box_config.sample_rate_hz, fs_out)
-        specs, powers = create_spectrogram(w, fs_out, NPERSEG, OVERLAP)
-        return (seg_start, seg_end, specs, powers)
+        specs, power_stats = create_spectrogram(w, fs_out, NPERSEG, OVERLAP)
+        return (seg_start, seg_end, specs, power_stats)
     except KeyError:
         return None
 
@@ -103,12 +104,17 @@ def infer_timerange(
     power_features_list = [w[3] for w in windows]
     power_array = np.array(power_features_list, dtype=np.float32)
 
-    power_log = np.log10(power_array + 1e-12)
-    power_mean = np.mean(power_log, axis=0, keepdims=True)
-    power_std = np.std(power_log, axis=0, keepdims=True) + 1e-8
-    power_normalized = (power_log - power_mean) / power_std
+    with open(REFERENCE_PKL, "rb") as f:
+        reference = pickle.load(f)
+    power_stat_means = reference[0]
+    power_stat_stddevs = reference[1]
+    power_stat_normalized = normalize_power_stats(
+        power_array, power_stat_means, power_stat_stddevs
+    )
 
-    for i, (window_start, window_end, spec, power_raw) in enumerate(windows):
+    for (window_start, window_end, spec, _), power_stat in zip(
+        windows, power_stat_normalized
+    ):
         if spec is None:
             continue
 
@@ -116,7 +122,7 @@ def infer_timerange(
         spec_tensor = (
             torch.from_numpy(spec).float().unsqueeze(0).unsqueeze(0).to(device)
         )
-        power_tensor = torch.from_numpy(power_raw).float().unsqueeze(0).to(device)
+        power_tensor = torch.from_numpy(power_stat).float().unsqueeze(0).to(device)
 
         # Run inference
         with torch.no_grad():

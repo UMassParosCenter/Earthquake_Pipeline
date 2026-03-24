@@ -1,6 +1,8 @@
 import pickle
 from multiprocessing import freeze_support
 
+import numpy as np
+
 from pipeline import event_catalog_utils, spectrogram_utils
 from scripts.constants import (
     BACKGROUND_BUFFER_HOURS,
@@ -15,6 +17,7 @@ from scripts.constants import (
     N_BACKGROUND_SAMPLES,
     NPERSEG,
     OVERLAP,
+    REFERENCE_PKL,
     SAMPLE_RATE_HZ,
 )
 
@@ -41,7 +44,7 @@ if __name__ == "__main__":
     )
 
     print("Processing earthquake data")
-    eq_specs, eq_powers, eq_times = spectrogram_utils.process_data(
+    eq_specs, eq_power_stats, eq_times = spectrogram_utils.process_data(
         earthquake_windows,
         box.sample_rate_hz,
         SAMPLE_RATE_HZ,
@@ -51,7 +54,7 @@ if __name__ == "__main__":
     )
 
     print("Processing background data")
-    bg_specs, bg_powers, bg_times = spectrogram_utils.process_data(
+    bg_specs, bg_power_stats, bg_times = spectrogram_utils.process_data(
         background_windows,
         box.sample_rate_hz,
         SAMPLE_RATE_HZ,
@@ -60,14 +63,22 @@ if __name__ == "__main__":
         EVENT_BEFORE_SEC + EVENT_AFTER_SEC,
     )
 
+    # Save reference for power statistics
+    combined_power_stats = np.vstack([eq_power_stats, bg_power_stats])
+    power_log = np.log10(combined_power_stats + 1e-12)
+    power_mean = np.mean(power_log, axis=0, keepdims=True)
+    power_std = np.std(power_log, axis=0, keepdims=True) + 1e-8
+    with open(REFERENCE_PKL, "wb") as f:
+        pickle.dump([power_mean, power_std], f)
+
     # Combine spectrograms and power features into tuples
     eq_dict = {
         f"earthquake_{i:04d}": (spec, power)
-        for i, (spec, power) in enumerate(zip(eq_specs, eq_powers))
+        for i, (spec, power) in enumerate(zip(eq_specs, eq_power_stats))
     }
     bg_dict = {
         f"background_{i:04d}": (spec, power)
-        for i, (spec, power) in enumerate(zip(bg_specs, bg_powers))
+        for i, (spec, power) in enumerate(zip(bg_specs, bg_power_stats))
     }
 
     print(f"Saved {len(eq_dict)} earthquake and {len(bg_dict)} background events")

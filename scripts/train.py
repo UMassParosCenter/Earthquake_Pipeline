@@ -16,11 +16,13 @@ from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
 
 from pipeline.cnn_utils import EarlyStopping, Spectrogram_Dataset, SpectrogramCNN
+from pipeline.common import normalize_power_stats
 from scripts import constants
 from scripts.constants import (
     BACKGROUND_DATA_PKL,
     EARTHQUAKE_DATA_PKL,
     MODEL_PTH_PATH,
+    REFERENCE_PKL,
 )
 
 # Load data and combine power and spectrograms
@@ -31,25 +33,32 @@ with open(BACKGROUND_DATA_PKL, "rb") as f:
     bg_dict: Dict = pickle.load(f)
 
 eq_spectrograms = [item[0] for item in eq_dict.values()]  # Spectrograms
-eq_power = np.array([item[1] for item in eq_dict.values()])  # Power features
+eq_power_stats = np.array([item[1] for item in eq_dict.values()])  # Power features
 
 bg_spectrograms = [item[0] for item in bg_dict.values()]
-bg_power = np.array([item[1] for item in bg_dict.values()])
+bg_power_stats = np.array([item[1] for item in bg_dict.values()])
+
+with open(REFERENCE_PKL, "rb") as f:
+    reference = pickle.load(f)
+power_stat_means = reference[0]
+power_stat_stddevs = reference[1]
 
 print(f"Loaded {len(eq_spectrograms)} EQ samples and {len(bg_spectrograms)} BG samples")
 print(f"Spectrogram shape: {eq_spectrograms[0].shape}")
-print(f"Power features shape: {eq_power[0].shape}")
+print(f"Power features shape: {eq_power_stats[0].shape}")
 
 X_spec = np.array(eq_spectrograms + bg_spectrograms, dtype=np.float32)
-X_power = np.vstack([eq_power, bg_power])
+X_power = normalize_power_stats(
+    np.vstack([eq_power_stats, bg_power_stats]), power_stat_means, power_stat_stddevs
+)
 y = np.concatenate(
     [
         np.ones(len(eq_spectrograms), dtype=int),
         np.zeros(len(bg_spectrograms), dtype=int),
     ]
 )
-dataset = Spectrogram_Dataset(X_spec, X_power, y)
 
+dataset = Spectrogram_Dataset(X_spec, X_power, y)
 n_splits = 5
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
@@ -87,13 +96,13 @@ for train_idx, val_idx in skf.split(X_power, y):
     for epoch in range(1, constants.N_EPOCHS):
         model.train()
         train_loss = 0.0
-        for specs, powers, labels in train_loader:
+        for specs, power_stats, labels in train_loader:
             specs = specs.to(device)
-            powers = powers.to(device)
+            power_stats = power_stats.to(device)
             labels = labels.to(device)
 
             optimizer.zero_grad()
-            outputs = model(specs, powers)
+            outputs = model(specs, power_stats)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
@@ -106,12 +115,12 @@ for train_idx, val_idx in skf.split(X_power, y):
         all_labels = []
 
         with torch.no_grad():
-            for specs, powers, labels in val_loader:
+            for specs, power_stats, labels in val_loader:
                 specs = specs.to(device)
-                powers = powers.to(device)
+                power_stats = power_stats.to(device)
                 labels = labels.to(device)
 
-                outputs = model(specs, powers)
+                outputs = model(specs, power_stats)
                 loss = criterion(outputs, labels)
                 val_loss += loss.item()
 
@@ -142,11 +151,11 @@ for train_idx, val_idx in skf.split(X_power, y):
     all_labels = []
 
     with torch.no_grad():
-        for specs, powers, labels in val_loader:
+        for specs, power_stats, labels in val_loader:
             specs = specs.to(device)
-            powers = powers.to(device)
+            power_stats = power_stats.to(device)
 
-            outputs = model(specs, powers)
+            outputs = model(specs, power_stats)
             probs = torch.softmax(outputs, dim=1)
             preds = outputs.argmax(dim=1)
 
@@ -195,11 +204,11 @@ all_probs = []
 test_loader = DataLoader(dataset, batch_size=2056, shuffle=False)
 
 with torch.no_grad():
-    for specs, powers, labels in test_loader:
+    for specs, power_stats, labels in test_loader:
         specs = specs.to(device)
-        powers = powers.to(device)
+        power_stats = power_stats.to(device)
 
-        outputs = model(specs, powers)
+        outputs = model(specs, power_stats)
         probs = torch.softmax(outputs, dim=1)
         preds = outputs.argmax(dim=1)
 

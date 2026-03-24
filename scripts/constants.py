@@ -8,7 +8,7 @@ EARTHQUAKE_DATA_LOG = "data/artifacts/Earthquake.txt"
 BACKGROUND_DATA_PKL = "data/artifacts/BackgroundSpectrograms.pkl"
 EARTHQUAKE_DATA_PKL = "data/artifacts/EarthquakeSpectrograms.pkl"
 TRAINING_LOG_PATH = "data/model/TrainingLog.csv"
-REFERENCE_NPZ_PATH = "data/model/Reference.npz"
+REFERENCE_PKL = "data/artifacts/Reference.pkl"
 MODEL_PTH_PATH = "data/model/CNNmodel.pth"
 
 # Output

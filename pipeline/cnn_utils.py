@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset
@@ -8,15 +7,10 @@ class Spectrogram_Dataset(Dataset):
     def __init__(self, spectrograms, power_features, labels):
         self.spectrograms = torch.tensor(spectrograms, dtype=torch.float32)
         self.labels = torch.tensor(labels, dtype=torch.long)
-
-        power_array = np.array(power_features, dtype=np.float32)
-        power_log = np.log10(power_array + 1e-12)
-
-        self.power_mean = np.mean(power_log, axis=0, keepdims=True)
-        self.power_std = np.std(power_log, axis=0, keepdims=True) + 1e-8
-
-        power_normalized = (power_log - self.power_mean) / self.power_std
-        self.power_features = torch.tensor(power_normalized, dtype=torch.float32)
+        self.power_features = torch.tensor(
+            power_features,
+            dtype=torch.float32,
+        )
 
     def __len__(self):
         return len(self.labels)
@@ -82,7 +76,7 @@ class SpectrogramCNN(nn.Module):
 
         # MLP for absolute power features
         self.power_branch = nn.Sequential(
-            nn.Linear(9, 16),
+            nn.Linear(4, 16),
             nn.BatchNorm1d(16),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.3),

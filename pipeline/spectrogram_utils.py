@@ -40,16 +40,10 @@ def create_spectrogram(
 
         power_features = np.array(
             [
-                np.sum(Sxx_cropped),  # 0: Total power (energy)
-                np.max(Sxx_cropped),  # 1: Peak power
-                np.mean(Sxx_cropped),  # 2: Average power
-                np.std(Sxx_cropped),  # 3: Power variability
-                np.percentile(Sxx_cropped, 90),  # 4: 90th percentile
-                np.median(Sxx_cropped),  # 5: Median power
-                # Band-specific powers
+                np.percentile(Sxx_cropped, 90),  # 90th percentile
+                np.median(Sxx_cropped),  # Median power
                 np.sum(Sxx[(f >= 1.0) & (f < 3.0), :]),  # 6: 1-3 Hz band
                 np.sum(Sxx[(f >= 3.0) & (f < 5.0), :]),  # 7: 3-5 Hz band
-                np.sum(Sxx[(f >= 5.0) & (f <= 10.0), :]),  # 8: 5-10 Hz band
             ],
             dtype=np.float32,
         )

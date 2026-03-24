@@ -140,3 +140,7 @@ def validate_event_sample(
     accepted = len(long_runs) > 0
 
     return accepted, flags, long_runs
+
+
+def normalize_power_stats(x, power_mean, power_stddev):
+    return (np.log10(x + 1e-12) - power_mean) / power_stddev
