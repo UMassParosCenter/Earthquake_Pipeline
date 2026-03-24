@@ -76,7 +76,7 @@ class SpectrogramCNN(nn.Module):
 
         # MLP for absolute power features
         self.power_branch = nn.Sequential(
-            nn.Linear(4, 16),
+            nn.Linear(9, 16),
             nn.BatchNorm1d(16),
             nn.ReLU(inplace=True),
             nn.Dropout(p=0.3),
