@@ -83,7 +83,11 @@ def process_data(
 
         waveform = safe_resample(waveform, fs_in, fs_out)
 
-        if len(waveform) != expected_event_length_sec * fs_out:
+        expected_samples = expected_event_length_sec * fs_out
+        if len(waveform) > expected_samples and len(waveform) < 1.1 * expected_samples:
+            waveform = waveform[0:expected_samples]
+
+        if len(waveform) != expected_samples:
             continue
         waveforms.append(waveform)
         lens.append(len(waveform))

@@ -97,6 +97,11 @@ def infer_timerange(
     )
     windows = process_map(spectrogram_func, times, chunksize=len(times) // 100)
 
+    windows = [w for w in windows if w is not None]
+    if len(windows) == 0:
+        print("No data for time range")
+        exit()
+
     results = []
     window_start: datetime
     window_end: datetime
