@@ -81,7 +81,6 @@ def process_data(
             :, -1
         ].astype(np.float64)
 
-        # Resample waveform
         waveform = safe_resample(waveform, fs_in, fs_out)
 
         if len(waveform) != expected_event_length_sec * fs_out:
@@ -90,7 +89,6 @@ def process_data(
         lens.append(len(waveform))
         start_times.append(event_struct["timestamp"])
 
-    # import pdb; pdb.set_trace()
     results = [_create_spectrogram(w) for w in waveforms]
     spectrograms = [r[0] for r in results]
     power_features = [r[1] for r in results]

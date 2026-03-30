@@ -23,8 +23,6 @@ from scripts.constants import (
     SAMPLE_RATE_HZ,
 )
 
-# assert len(sys.argv) == 2, "Wrong number of args, provide one datetime to view"
-
 power_mean = None
 power_stddev = None
 
@@ -48,6 +46,8 @@ while True:
         box,
     )
     assert data is not None, "Influx query failed"
+
+    # TODO have the viewer use the same pre-processing code as the pipeline somehow
 
     data_array = data["waveform"][f"{box.box_id}_{box.sensor_id}"]
     unix_times = data_array[:, 0]
@@ -93,5 +93,4 @@ while True:
     ax2.imshow(Sxx_log, interpolation="none", cmap="plasma")
     ax2.set_title("Model Inputs")
 
-    # plt.tight_layout()
     plt.show()

@@ -39,7 +39,7 @@ def welch_psd(
     nfft = int(2 ** np.ceil(np.log2(nperseg)))
 
     window = windows.hann(nperseg)
-    f, pxx = welch(x, fs, window=window, noverlap=noverlap, nfft=nfft, detrend=False)  # type: ignore
+    f, pxx = welch(x, fs, window=window, noverlap=noverlap, nfft=nfft, detrend=False)
     keep = f <= 10
     return pxx[keep], f[keep]
 

@@ -1,5 +1,4 @@
 import csv
-import pickle
 from datetime import datetime, timedelta
 from multiprocessing import freeze_support
 from pathlib import Path
@@ -18,17 +17,8 @@ if __name__ == "__main__":
     freeze_support()
     box = event_catalog_utils.load_box_config(BOX_CONFIG_PATH)
 
-    # Try staggering windows
-    # Play with window size
-    # Ask about how to mitigate the fact that the event could happen at many points within window
-    #
-
-    # Start and end times for inference
-    #
     start_time = datetime(2025, 5, 5, 0, 0, 0, tzinfo=None)
     end_time = datetime(2025, 5, 5, 23, 59, 59, tzinfo=None)
-
-    # end_time = datetime(2025, 5, 5, 0, 10, 10, tzinfo=None)
 
     results: list[eval_utils.Inference] = eval_utils.infer_timerange(
         start_time,
@@ -50,6 +40,7 @@ if __name__ == "__main__":
     results += results_offset
     results.sort(key=lambda i: i.window_start)
 
+    # Don't include overlapping segments in the detections list
     detections = [r for r in results if r.pred == 1]
     detections_filtered = []
     i = 0
@@ -82,7 +73,6 @@ if __name__ == "__main__":
         writer_event = csv.writer(f_event)
         writer_strong_event = csv.writer(f_strong_event)
         header = [
-            # "query_time",
             "window_start",
             "window_end",
             "predicted_class",
