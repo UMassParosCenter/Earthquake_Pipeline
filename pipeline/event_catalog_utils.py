@@ -140,7 +140,7 @@ def random_shift_windows(
     box: BoxConfig,
 ):
     random = np.random.default_rng()
-    n_variations = random.integers(0, 6)
+    n_variations = random.integers(0, 3)
     ret = [
         read_earthquake_window(
             idx,
