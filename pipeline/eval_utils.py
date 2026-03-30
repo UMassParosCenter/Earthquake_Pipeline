@@ -6,13 +6,18 @@ from datetime import UTC, datetime, timedelta
 import numpy as np
 import torch
 from paros_data_grabber import query_influx_data
+from tqdm import tqdm
 from tqdm.contrib.concurrent import process_map
 
 from pipeline.cnn_utils import SpectrogramCNN
 from pipeline.common import normalize_power_stats, safe_resample
 from pipeline.event_catalog_utils import BoxConfig
 from pipeline.spectrogram_utils import create_spectrogram
-from scripts.constants import NPERSEG, OVERLAP, REFERENCE_PKL
+from scripts.constants import (
+    NPERSEG,
+    OVERLAP,
+    REFERENCE_PKL,
+)
 
 
 @dataclass
@@ -53,14 +58,23 @@ def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
             password=box_config.password,
         )
         key = f"{box_config.box_id}_{box_config.sensor_id}"
-        waveform = data.get(key)
-        if waveform is None or waveform.empty:
-            print(f"No data for window {seg_start} to {seg_end}")
+        obj = data.get(key)
+        if obj is None or obj.empty:
+            tqdm.write(f"No data for window {seg_start} to {seg_end}")
             return
 
-        samples = waveform["value"].values
-        w = safe_resample(samples, box_config.sample_rate_hz, fs_out)
-        specs, power_stats = create_spectrogram(w, fs_out, NPERSEG, OVERLAP)
+        waveform = obj["value"].values
+        waveform = safe_resample(waveform, box_config.sample_rate_hz, fs_out)
+
+        expected_samples = event_duration * fs_out
+        if len(waveform) > expected_samples and len(waveform) < 1.1 * expected_samples:
+            waveform = waveform[0:expected_samples]
+
+        if len(waveform) != expected_samples:
+            tqdm.write(f"Data for window {seg_start} has wrong length")
+            return None
+
+        specs, power_stats = create_spectrogram(waveform, fs_out, NPERSEG, OVERLAP)
         return (seg_start, seg_end, specs, power_stats)
     except KeyError:
         return None
@@ -120,28 +134,31 @@ def infer_timerange(
     for (window_start, window_end, spec, _), power_stat in zip(
         windows, power_stat_normalized
     ):
-        if spec is None:
-            continue
+        try:
+            if spec is None:
+                continue
 
-        spec_tensor = (
-            torch.from_numpy(spec).float().unsqueeze(0).unsqueeze(0).to(device)
-        )
-        power_tensor = torch.from_numpy(power_stat).float().unsqueeze(0).to(device)
+            spec_tensor = (
+                torch.from_numpy(spec).float().unsqueeze(0).unsqueeze(0).to(device)
+            )
+            power_tensor = torch.from_numpy(power_stat).float().unsqueeze(0).to(device)
 
-        with torch.no_grad():
-            logits = model(spec_tensor, power_tensor)
-            probs = torch.softmax(logits, dim=1)
-            pred = logits.argmax(dim=1).item()
-            prob_bg = probs[0, 0].item()
-            prob_eq = probs[0, 1].item()
+            with torch.no_grad():
+                logits = model(spec_tensor, power_tensor)
+                probs = torch.softmax(logits, dim=1)
+                pred = logits.argmax(dim=1).item()
+                prob_bg = probs[0, 0].item()
+                prob_eq = probs[0, 1].item()
 
-        result = Inference(
-            now=datetime.now(UTC).isoformat(),
-            window_start=window_start,
-            window_end=window_end,
-            pred=pred,
-            prob_bg=prob_bg,
-            prob_eq=prob_eq,
-        )
-        results.append(result)
+            result = Inference(
+                now=datetime.now(UTC).isoformat(),
+                window_start=window_start,
+                window_end=window_end,
+                pred=pred,
+                prob_bg=prob_bg,
+                prob_eq=prob_eq,
+            )
+            results.append(result)
+        except RuntimeError:
+            print(f"Error on window {window_start}")
     return results
