@@ -75,7 +75,7 @@ for train_idx, val_idx in skf.split(X_power, y):
     train_set = Subset(dataset, train_idx.tolist())
     val_set = Subset(dataset, val_idx.tolist())
 
-    train_loader = DataLoader(train_set, batch_size=32, shuffle=True)
+    train_loader = DataLoader(train_set, batch_size=32, shuffle=True, drop_last=True)
     val_loader = DataLoader(val_set, batch_size=32, shuffle=False)
 
     model = SpectrogramCNN().to(device)
