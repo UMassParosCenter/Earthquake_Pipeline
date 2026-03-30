@@ -50,25 +50,21 @@ class SpectrogramCNN(nn.Module):
         self.features = nn.Sequential(
             # Block 1
             nn.Conv2d(1, 18, kernel_size=3, padding="same"),
-            nn.BatchNorm2d(18),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2, 2)),
             nn.Dropout2d(p=dropout_rate),
             # Block 2
             nn.Conv2d(18, 36, kernel_size=3, padding="same"),
-            nn.BatchNorm2d(36),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2, 2)),
             nn.Dropout2d(p=dropout_rate),
             # Block 3
             nn.Conv2d(36, 54, kernel_size=3, padding="same"),
-            nn.BatchNorm2d(54),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2, 2)),
             nn.Dropout2d(p=dropout_rate),
             # Block 4
             nn.Conv2d(54, 54, kernel_size=3, padding="same"),
-            nn.BatchNorm2d(54),
             nn.ReLU(inplace=True),
             nn.MaxPool2d((2, 2)),
             nn.Dropout2d(p=dropout_rate),
@@ -77,22 +73,20 @@ class SpectrogramCNN(nn.Module):
         # MLP for absolute power features
         self.power_branch = nn.Sequential(
             nn.Linear(5, 16),
-            nn.BatchNorm1d(16),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.3),
+            nn.Dropout(p=dropout_rate),
             nn.Linear(16, 32),
-            nn.BatchNorm1d(32),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.3),
+            nn.Dropout(p=dropout_rate),
         )
 
         self.classifier = nn.Sequential(
             nn.Linear(5 * 2 * 54 + 32, 256),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
+            nn.Dropout(p=dropout_rate),
             nn.Linear(256, 128),
             nn.ReLU(inplace=True),
-            nn.Dropout(p=0.5),
+            nn.Dropout(p=dropout_rate),
             nn.Linear(128, 2),
         )
 
