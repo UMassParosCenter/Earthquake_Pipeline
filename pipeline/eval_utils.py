@@ -118,13 +118,11 @@ def infer_timerange(
         if spec is None:
             continue
 
-        # Prepare inputs
         spec_tensor = (
             torch.from_numpy(spec).float().unsqueeze(0).unsqueeze(0).to(device)
         )
         power_tensor = torch.from_numpy(power_stat).float().unsqueeze(0).to(device)
 
-        # Run inference
         with torch.no_grad():
             logits = model(spec_tensor, power_tensor)
             probs = torch.softmax(logits, dim=1)
@@ -132,7 +130,6 @@ def infer_timerange(
             prob_bg = probs[0, 0].item()
             prob_eq = probs[0, 1].item()
 
-        # Store result with power info
         result = Inference(
             now=datetime.now(UTC).isoformat(),
             window_start=window_start,
