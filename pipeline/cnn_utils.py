@@ -3,23 +3,25 @@ import torch.nn as nn
 from torch.utils.data import Dataset
 
 
-class Spectrogram_Dataset(Dataset):
-    def __init__(self, spectrograms, power_features, labels):
+class Spectrogram_Dataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]):
+    def __init__(self, spectrograms, power_features, labels, names):
         self.spectrograms = torch.tensor(spectrograms, dtype=torch.float32)
         self.labels = torch.tensor(labels, dtype=torch.long)
         self.power_features = torch.tensor(
             power_features,
             dtype=torch.float32,
         )
+        self.names = names
 
     def __len__(self):
         return len(self.labels)
 
-    def __getitem__(self, idx):
-        spec = self.spectrograms[idx].unsqueeze(0)
-        power = self.power_features[idx]
-        label = self.labels[idx]
-        return spec, power, label
+    def __getitem__(self, index):
+        spec = self.spectrograms[index].unsqueeze(0)
+        power = self.power_features[index]
+        label = self.labels[index]
+        name = self.names[index]
+        return spec, power, label, name
 
 
 class EarlyStopping:

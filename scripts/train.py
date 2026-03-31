@@ -1,4 +1,5 @@
 import pickle
+from collections import defaultdict
 from typing import Dict
 
 import numpy as np
@@ -23,6 +24,7 @@ from scripts.constants import (
     EARTHQUAKE_DATA_PKL,
     MODEL_PTH_PATH,
     REFERENCE_PKL,
+    TRAINING_LOG_PATH,
 )
 
 # Load data and combine power and spectrograms
@@ -34,9 +36,11 @@ with open(BACKGROUND_DATA_PKL, "rb") as f:
 
 eq_spectrograms = [item[0] for item in eq_dict.values()]
 eq_power_stats = np.array([item[1] for item in eq_dict.values()])
+eq_times = [item[2] for item in eq_dict.values()]
 
 bg_spectrograms = [item[0] for item in bg_dict.values()]
 bg_power_stats = np.array([item[1] for item in bg_dict.values()])
+bg_times = [item[2] for item in bg_dict.values()]
 
 with open(REFERENCE_PKL, "rb") as f:
     reference = pickle.load(f)
@@ -51,6 +55,7 @@ X_spec = np.array(eq_spectrograms + bg_spectrograms, dtype=np.float32)
 X_power = normalize_power_stats(
     np.vstack([eq_power_stats, bg_power_stats]), power_stat_means, power_stat_stddevs
 )
+X_names = eq_times + bg_times
 y = np.concatenate(
     [
         np.ones(len(eq_spectrograms), dtype=int),
@@ -58,7 +63,7 @@ y = np.concatenate(
     ]
 )
 
-dataset = Spectrogram_Dataset(X_spec, X_power, y)
+dataset = Spectrogram_Dataset(X_spec, X_power, y, X_names)
 n_splits = 5
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
@@ -95,7 +100,7 @@ for train_idx, val_idx in skf.split(X_power, y):
 
     for epoch in range(1, constants.N_EPOCHS):
         model.train()
-        for specs, power_stats, labels in train_loader:
+        for specs, power_stats, labels, _ in train_loader:
             specs = specs.to(device)
             power_stats = power_stats.to(device)
             labels = labels.to(device)
@@ -112,7 +117,7 @@ for train_idx, val_idx in skf.split(X_power, y):
         all_labels = []
 
         with torch.no_grad():
-            for specs, power_stats, labels in val_loader:
+            for specs, power_stats, labels, _ in val_loader:
                 specs = specs.to(device)
                 power_stats = power_stats.to(device)
                 labels = labels.to(device)
@@ -155,7 +160,7 @@ for train_idx, val_idx in skf.split(X_power, y):
     all_labels = []
 
     with torch.no_grad():
-        for specs, power_stats, labels in val_loader:
+        for specs, power_stats, labels, _ in val_loader:
             specs = specs.to(device)
             power_stats = power_stats.to(device)
 
@@ -208,11 +213,12 @@ val_loss = 0.0
 all_preds = []
 all_labels = []
 all_probs = []
+all_names = []
 
 test_loader = DataLoader(dataset, batch_size=32, shuffle=False)
 
 with torch.no_grad():
-    for specs, power_stats, labels in test_loader:
+    for specs, power_stats, labels, names in test_loader:
         specs = specs.to(device)
         power_stats = power_stats.to(device)
 
@@ -223,6 +229,7 @@ with torch.no_grad():
         all_preds.extend(preds.cpu().numpy())
         all_labels.extend(labels.cpu().numpy())
         all_probs.extend(probs[:, 1].cpu().numpy())
+        all_names.extend(names)
 
 # Convert to numpy arrays
 all_preds = np.array(all_preds)
@@ -244,5 +251,24 @@ print(f"Recall:    {recall:.4f}")
 print(f"F1 Score:  {f1:.4f}")
 print("\nConfusion Matrix (rows: true, cols: predicted) [0=Background, 1=Earthquake]:")
 print(cm)
+
+confusion_groups = defaultdict(list)
+for pred, label, name in zip(all_preds, all_labels, all_names):
+    confusion_groups[(label, pred)].append(name)
+
+false_positives = confusion_groups[(0, 1)]
+false_negatives = confusion_groups[(1, 0)]
+
+with open(TRAINING_LOG_PATH, "w") as f:
+    f.write("False positives \n")
+    f.write("=" * 20 + "\n")
+    for time in false_positives:
+        f.write(f"{time}\n")
+
+    f.write("\nFalse negatives \n")
+    f.write("=" * 20 + "\n")
+    for time in false_negatives:
+        f.write(f"{time}\n")
+
 
 print(f"\nModel saved to {MODEL_PTH_PATH}")

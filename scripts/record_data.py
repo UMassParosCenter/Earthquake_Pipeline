@@ -87,12 +87,12 @@ if __name__ == "__main__":
 
     # Combine spectrograms and power features into tuples
     eq_dict = {
-        f"earthquake_{i:04d}": (spec, power)
-        for i, (spec, power) in enumerate(zip(eq_specs, eq_power_stats))
+        f"earthquake_{i:04d}": (spec, power, time)
+        for i, (spec, power, time) in enumerate(zip(eq_specs, eq_power_stats, eq_times))
     }
     bg_dict = {
-        f"background_{i:04d}": (spec, power)
-        for i, (spec, power) in enumerate(zip(bg_specs, bg_power_stats))
+        f"background_{i:04d}": (spec, power, time)
+        for i, (spec, power, time) in enumerate(zip(bg_specs, bg_power_stats, bg_times))
     }
 
     print(f"Saved {len(eq_dict)} earthquake and {len(bg_dict)} background events")
