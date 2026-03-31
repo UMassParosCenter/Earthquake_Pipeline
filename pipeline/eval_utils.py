@@ -70,8 +70,17 @@ def spectrogram_for_window(time, event_duration, fs_out, box_config: BoxConfig):
         if len(waveform) > expected_samples and len(waveform) < 1.1 * expected_samples:
             waveform = waveform[0:expected_samples]
 
+        if len(waveform) < expected_samples and len(waveform) > 0.95 * expected_samples:
+            pad = np.zeros(
+                (expected_samples - len(waveform)),
+                dtype=waveform.dtype,
+            )
+            waveform = np.concat((waveform, pad))
+
         if len(waveform) != expected_samples:
-            tqdm.write(f"Data for window {seg_start} has wrong length")
+            tqdm.write(
+                f"Data for window {seg_start} has wrong length (Expected {expected_samples}, got {len(waveform)})"
+            )
             return None
 
         specs, power_stats = create_spectrogram(waveform, fs_out, NPERSEG, OVERLAP)
