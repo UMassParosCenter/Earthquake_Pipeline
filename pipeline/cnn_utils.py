@@ -4,14 +4,14 @@ from torch.utils.data import Dataset
 
 
 class Spectrogram_Dataset(Dataset[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]):
-    def __init__(self, spectrograms, power_features, labels, names):
+    def __init__(self, spectrograms, power_features, names, labels):
         self.spectrograms = torch.tensor(spectrograms, dtype=torch.float32)
+        self.names = names
         self.labels = torch.tensor(labels, dtype=torch.long)
         self.power_features = torch.tensor(
             power_features,
             dtype=torch.float32,
         )
-        self.names = names
 
     def __len__(self):
         return len(self.labels)

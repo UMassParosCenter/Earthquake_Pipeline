@@ -11,7 +11,7 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, train_test_split
 from torch.nn.modules.loss import CrossEntropyLoss
 from torch.utils.data import DataLoader
 from torch.utils.data.dataset import Subset
@@ -28,7 +28,6 @@ from scripts.constants import (
 )
 
 # Load data and combine power and spectrograms
-
 with open(EARTHQUAKE_DATA_PKL, "rb") as f:
     eq_dict: Dict = pickle.load(f)
 with open(BACKGROUND_DATA_PKL, "rb") as f:
@@ -55,7 +54,7 @@ X_spec = np.array(eq_spectrograms + bg_spectrograms, dtype=np.float32)
 X_power = normalize_power_stats(
     np.vstack([eq_power_stats, bg_power_stats]), power_stat_means, power_stat_stddevs
 )
-X_names = eq_times + bg_times
+X_names = np.array(eq_times + bg_times)
 y = np.concatenate(
     [
         np.ones(len(eq_spectrograms), dtype=int),
@@ -63,22 +62,38 @@ y = np.concatenate(
     ]
 )
 
-dataset = Spectrogram_Dataset(X_spec, X_power, y, X_names)
-n_splits = 5
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+# Split dataset into training and holdout sets
+indicies = np.arange(len(y))
+training_idx, holdout_idx = train_test_split(indicies, test_size=0.2, random_state=42)
+
+dataset = Spectrogram_Dataset(
+    X_spec,
+    X_power,
+    X_names,
+    y,
+)
+
+print(f"\nTraining model on 5 folds from {len(training_idx)} samples")
+print("-" * 40)
+
 
 # Store metrics for each fold
 fold_metrics = {"accuracy": [], "precision": [], "recall": [], "f1": [], "val_loss": []}
 best_fold_score = 0
 
-fold = 1
+n_splits = 5
+skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=42)
+training_dataset = Subset(dataset, training_idx.tolist())
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-for train_idx, val_idx in skf.split(X_power, y):
+fold = 1
+for fold_training_idx, fold_val_idx in skf.split(
+    X_power[training_idx], y[training_idx]
+):
     print(f"\nFold {fold}/{n_splits}:")
 
-    train_set = Subset(dataset, train_idx.tolist())
-    val_set = Subset(dataset, val_idx.tolist())
+    train_set = Subset(training_dataset, fold_training_idx.tolist())
+    val_set = Subset(training_dataset, fold_val_idx.tolist())
 
     train_loader = DataLoader(train_set, batch_size=32, shuffle=True, drop_last=True)
     val_loader = DataLoader(val_set, batch_size=32, shuffle=False)
@@ -181,11 +196,6 @@ for train_idx, val_idx in skf.split(X_power, y):
     fold_metrics["recall"].append(recall)
     fold_metrics["f1"].append(f1)
 
-    print(f"\nFold {fold} Results:")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall: {recall:.4f}")
-    print(f"F1: {f1:.4f}")
-
     if f1 > best_fold_score:
         best_fold_score = f1
         torch.save(model.state_dict(), MODEL_PTH_PATH)
@@ -206,16 +216,19 @@ print(
     f"F1-Score:  {np.mean(fold_metrics['f1']):.4f} ± {np.std(fold_metrics['f1']):.4f}"
 )
 
+print(f"\nValidating model on holdout dataset from {len(holdout_idx)} samples")
+print("-" * 40)
+
 model = SpectrogramCNN().to(device)
 model.load_state_dict(torch.load(MODEL_PTH_PATH, map_location="cpu"))
 model.eval()
-val_loss = 0.0
 all_preds = []
 all_labels = []
 all_probs = []
 all_names = []
 
-test_loader = DataLoader(dataset, batch_size=32, shuffle=False)
+test_dataset = Subset(dataset, holdout_idx.tolist())
+test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False)
 
 with torch.no_grad():
     for specs, power_stats, labels, names in test_loader:
@@ -237,20 +250,19 @@ all_labels = np.array(all_labels)
 all_probs = np.array(all_probs)
 
 # Calculate metrics
-avg_loss = val_loss / len(all_labels)
 accuracy = accuracy_score(all_labels, all_preds)
 precision = precision_score(all_labels, all_preds)
 recall = recall_score(all_labels, all_preds)
 f1 = f1_score(all_labels, all_preds)
-cm = confusion_matrix(all_labels, all_preds)
+confusion_mat = confusion_matrix(all_labels, all_preds)
 
-print("\nResults across entire train/test set:")
+print("\nResults across holdout set:")
 print(f"Accuracy:   {accuracy:.4f}")
 print(f"Precision: {precision:.4f}")
 print(f"Recall:    {recall:.4f}")
 print(f"F1 Score:  {f1:.4f}")
 print("\nConfusion Matrix (rows: true, cols: predicted) [0=Background, 1=Earthquake]:")
-print(cm)
+print(confusion_mat)
 
 confusion_groups = defaultdict(list)
 for pred, label, name in zip(all_preds, all_labels, all_names):
@@ -258,9 +270,22 @@ for pred, label, name in zip(all_preds, all_labels, all_names):
 
 false_positives = confusion_groups[(0, 1)]
 false_negatives = confusion_groups[(1, 0)]
+true_positives = confusion_groups[(1, 1)]
+true_negatives = confusion_groups[(1, 0)]
 
 with open(TRAINING_LOG_PATH, "w") as f:
-    f.write("False positives \n")
+    f.write(f"Results from holdout dataset from {len(holdout_idx)} samples \n")
+    f.write("True positives \n")
+    f.write("=" * 20 + "\n")
+    for time in true_positives:
+        f.write(f"{time}\n")
+
+    f.write("\nTrue negatives \n")
+    f.write("=" * 20 + "\n")
+    for time in true_positives:
+        f.write(f"{time}\n")
+
+    f.write("\nFalse positives \n")
     f.write("=" * 20 + "\n")
     for time in false_positives:
         f.write(f"{time}\n")
