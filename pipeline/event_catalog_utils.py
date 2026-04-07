@@ -35,8 +35,8 @@ def load_box_config(json_path: pathlib.Path) -> BoxConfig:
 
 def read_background_window(
     timestamp: pd.Timestamp,
-    time_before: timedelta,
-    time_after: timedelta,
+    time_before: pd.Timedelta,
+    time_after: pd.Timedelta,
     box: BoxConfig,
 ):
     start_t = (timestamp - time_before).strftime("%Y-%m-%dT%H:%M:%S")
@@ -99,8 +99,8 @@ def generate_background_data(
 
         read_func = partial(
             read_background_window,
-            time_before=timedelta(seconds=seconds_before),
-            time_after=timedelta(seconds=seconds_after),
+            time_before=pd.Timedelta(seconds=seconds_before),
+            time_after=pd.Timedelta(seconds=seconds_after),
             box=box_config,
         )
 
