@@ -35,7 +35,7 @@ if __name__ == "__main__":
     )
 
     print("Processing earthquake data")
-    eq_specs, eq_power_stats, eq_times = spectrogram_utils.process_data(
+    eq_specs, eq_power_stats, eq_times = spectrogram_utils.batch_process_data(
         earthquake_windows,
         box.sample_rate_hz,
         SAMPLE_RATE_HZ,
@@ -55,7 +55,7 @@ if __name__ == "__main__":
     )
 
     print("Processing background data")
-    bg_specs, bg_power_stats, bg_times = spectrogram_utils.process_data(
+    bg_specs, bg_power_stats, bg_times = spectrogram_utils.batch_process_data(
         background_windows,
         box.sample_rate_hz,
         SAMPLE_RATE_HZ,

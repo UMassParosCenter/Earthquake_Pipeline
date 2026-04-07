@@ -13,21 +13,8 @@ def create_spectrogram(
     w: NDArray, fs: int, nperseg: int, overlap: float
 ) -> tuple[np.ndarray, np.ndarray]:
     try:
-        waveform = signal.detrend(w)
-        n_samples: int = len(waveform)
-        taper_len: int = int(n_samples * 0.01)
-        if taper_len % 2 != 0:
-            taper_len += 1
-
-        # Hann window at the edges (Tukey)
-        tukey_window: NDArray[np.floating] = signal.windows.tukey(n_samples, 0.2)
-        waveform *= tukey_window
-
-        filter = signal.butter(4, 1.0, "high", fs=fs, output="sos")
-        waveform = signal.sosfilt(filter, waveform)
-
         f, t, Sxx = signal.spectrogram(
-            waveform,
+            w,
             SAMPLE_RATE_HZ,
             nperseg=nperseg,
             noverlap=round(nperseg * overlap),
@@ -57,7 +44,39 @@ def create_spectrogram(
         raise e
 
 
-def process_data(
+def prepare_waveform(
+    w: NDArray, fs_in: int, fs_out: int, expected_event_length_sec: int
+) -> NDArray:
+    waveform = safe_resample(w, fs_in, fs_out)
+
+    expected_samples = expected_event_length_sec * fs_out
+    if len(waveform) > expected_samples and len(waveform) < 1.1 * expected_samples:
+        waveform = waveform[0:expected_samples]
+
+    if len(waveform) < expected_samples and len(waveform) > 0.95 * expected_samples:
+        pad = np.zeros(
+            (expected_samples - len(waveform)),
+            dtype=waveform.dtype,
+        )
+        waveform = np.concat((waveform, pad))
+
+    waveform = signal.detrend(waveform)
+    n_samples: int = len(waveform)
+    taper_len: int = int(n_samples * 0.01)
+    if taper_len % 2 != 0:
+        taper_len += 1
+
+    # Hann window at the edges (Tukey)
+    tukey_window: NDArray[np.floating] = signal.windows.tukey(n_samples, 0.2)
+    waveform *= tukey_window
+
+    filter = signal.butter(4, 1.0, "high", fs=fs_out, output="sos")
+    waveform = signal.sosfilt(filter, waveform)
+
+    return waveform
+
+
+def batch_process_data(
     data: dict,
     fs_in: int,
     fs_out: int,
@@ -81,20 +100,9 @@ def process_data(
             :, -1
         ].astype(np.float64)
 
-        waveform = safe_resample(waveform, fs_in, fs_out)
+        waveform = prepare_waveform(waveform, fs_in, fs_out, expected_event_length_sec)
 
-        expected_samples = expected_event_length_sec * fs_out
-        if len(waveform) > expected_samples and len(waveform) < 1.1 * expected_samples:
-            waveform = waveform[0:expected_samples]
-
-        if len(waveform) < expected_samples and len(waveform) > 0.95 * expected_samples:
-            pad = np.zeros(
-                (expected_samples - len(waveform)),
-                dtype=waveform.dtype,
-            )
-            waveform = np.concat((waveform, pad))
-
-        if len(waveform) != expected_samples:
+        if len(waveform) != expected_event_length_sec * fs_out:
             continue
         waveforms.append(waveform)
         lens.append(len(waveform))
