@@ -1,5 +1,5 @@
 # Earthquake Infrasound Classifier
-Suite of scripts and utilities for training, evaluating, and deploying deep learning models to classify infrasonic Power Spectral Density (PSD) data as earthquake-generated or background noise.
+Suite of scripts and utilities for training, evaluating, and deploying deep learning models to classify infrasonic data as earthquake-generated or background noise.
 
 ## Setup
 Clone this repo and install dependencies in a virtual environment:
@@ -28,19 +28,22 @@ Top level scripts are located in `/scripts` and can be run from the command line
 ### 0. Parameters
 Tuning parameters for the pipeline can be found in `scripts/constants.py`.
 
-
-### 1. PSD Generation
-Run the following script to save a dictionary of events to PSDs in `/data` for later use in training:
+### 1. Data Generation
+Run the following script to pull data from InfluxDB for later use in training:
 ```bash
 python -m scripts.record_data
 ```
+Files will be generated in `/data` in the form of `.pkl` files.
 
 ### 2. Model Training
-To train the model and save a `.pth` file and a `.npz` storing normalization information run:
+The current model combines a convolutional neural net for learning signal shape and a linear component for incorporating power metrics. The model's code can be found in [`cnn_utils.py`](pipeline/cnn_utils.py).
+
+To run training use:
 ```bash
 python -m scripts.train
 ```
-Results will be saved in `/data/model`.
+A `.pth` file containing model weights and a `.npz` storing normalization info will be stored in `/data/model`.
+
 ### 3. Evaluation
 To train evaluate the model against a data range, run:
 ```bash
@@ -48,5 +51,10 @@ python -m scripts.train
 ```
 Start and end times can be modified in the script. Results will be saved as CSV files in `/data/output`.
 
-## Data Output
-All outputs are stored in the generated `data/` folder and its subdirectories.
+### 4. Viewer
+The viewer can be used to visualize data from a provided time range. The only mandatory argument is a start time for the data range. By default the length of the window will match what's specified in [`constants.py`](scripts/constants.py), but can be overridden by the `--duration` or `--end_time` flags.
+
+For example, if you wanted to plot 120 seconds of data starting at 23:58:01 UTC on 4/2/2024, you would run the following command:
+```bash
+python -m scripts.view 2024-04-02T23:58:01 --duration 120
+```
