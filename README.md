@@ -22,6 +22,8 @@ To use Paros sensor data hosted on InfluxDB, configure the source in `sensor_con
 ### Earthquake Event List
 A list of earthquake events located at `data/EarthQuakeData.csv` is used to generate training and evaluation datasets. Sensor data temporally proximate to earthquake times (compensated for propagation delay) is used to populate the earthquake class.
 
+Generate a CSV at https://earthquake.usgs.gov/earthquakes/search/.
+
 ## Usage
 Top level scripts are located in `/scripts` and can be run from the command line.
 
@@ -29,14 +31,14 @@ Top level scripts are located in `/scripts` and can be run from the command line
 Tuning parameters for the pipeline can be found in `scripts/constants.py`.
 
 ### 1. Data Generation
-Run the following script to pull data from InfluxDB for later use in training:
+Run the following script to pull data from InfluxDB, run [preprocessing](#data-preprocessing), and store for use in training:
 ```bash
 python -m scripts.record_data
 ```
 Files will be generated in `/data` in the form of `.pkl` files.
 
 ### 2. Model Training
-The current model combines a convolutional neural net for learning signal shape and a linear component for incorporating power metrics. The model's code can be found in [`cnn_utils.py`](pipeline/cnn_utils.py).
+The [current model](#model) combines a convolutional neural net for learning signal shape and a linear component for incorporating power metrics. Code for the model can be found in [`cnn_utils.py`](pipeline/cnn_utils.py).
 
 To run training use:
 ```bash
@@ -58,3 +60,26 @@ For example, if you wanted to plot 120 seconds of data starting at 23:58:01 UTC 
 ```bash
 python -m scripts.view 2024-04-02T23:58:01 --duration 120
 ```
+
+## Pipeline Overview
+```mermaid
+flowchart TD;
+A["Earthquake Timestamps"]  --> |"Randomized Time Offsets"| B["Earthquake Sensor Readings"];
+C["Paros Sensor Data"] --> B;
+C-->D["Background Noise Sensor Readings"];
+B-->E;
+D-->E["Combined Dataset"];
+E-->F["Preprocessed Data (91x33 spectrograms)"];
+F-->|"80%"|G["Training Dataset"];
+F-->|"20%"|H["Test Dataset"];
+G-->I["Trained Model"];
+H-->J;
+I-->J["Classification Results"];
+```
+### Data Preprocessing
+Most parameters for data preprocessing can be found in [`constants.py`](scripts/constants.py). Wavefroms from the Paros sensor are detrended, filtered through a tapered-cosine window, and passed through a high-pass filter. Next a spectrogram is then created plotting frequencies from 1 Hz to 10 Hz, log-scaled, and saved.
+
+The [viewer](#4-viewer) is useful for visualizing model inputs.
+
+### Model
+The model has two components: a primary convolutional net based on the model described in [this paper](https://doi.org/10.1029/2018GL081119 ) from Sandia National Laboratories, and a secondary multilayer perceptron. Log-scaled spectrograms are passed through the CNN, while the MLP processes an array representing the relative power of various frequency bands in the signal. A classification head then produces the final confidence of an earthquake event.

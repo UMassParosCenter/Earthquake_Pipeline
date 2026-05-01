@@ -14,7 +14,7 @@ MODEL_PTH_PATH = "data/model/CNNmodel.pth"
 # Output
 INFERENCE_EXPORT_PATH = "data/output/"
 
-# PSD parameters
+# Data parameters
 BACKGROUND_BUFFER_HOURS = 1
 N_BACKGROUND_SAMPLES = 2000
 EVENT_BEFORE_SEC = 45
